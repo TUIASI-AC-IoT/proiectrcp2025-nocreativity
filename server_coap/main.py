@@ -1,5 +1,4 @@
 import socket
-import threading
 import time
 
 import Pachet
@@ -29,7 +28,7 @@ if __name__ == '__main__':
         print("header:",header)
         print("payload:",payload)
         #Pachet.build_and_send_acknowledgement(Socket_Server,addr_client,1,"OK")
-        Pachet.handle_request(header,payload,addr_client,Socket_Server)
+        Pachet.handle_request(header, payload, addr_client, Socket_Server)
         time.sleep(1)
         #datac,addr_server = client.recvfrom(1024)
         #header1,payload1 = Pachet.parse_packet(datac)
