@@ -3,11 +3,21 @@ import time
 
 import Pachet
 
-packet = b'\x40\x01\x04\xD2' + b'\xFF' + \
-    b'{"action":"discover","device":"client1"}'
+import base64
+import json
 
-#client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+TEXT = "Hello guyes"
+
+content_b64 = base64.b64encode(TEXT.encode("utf-8")).decode("utf-8")
+
+packet = b'\x40\x02\x04\xD2' + b'\xFF' + \
+    json.dumps({
+        "path": "storage/test/hello.txt",
+        "content": content_b64
+    }).encode("utf-8")
+
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 Server_Ip = socket.gethostbyname(socket.gethostname()) #ia ip-ul hostului, in cazul dat laptopul personal
 Server_Port = 5683 # portul predestinat unencrypted CoAP
@@ -15,7 +25,7 @@ Server_Port = 5683 # portul predestinat unencrypted CoAP
 Socket_Server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # setez la transmitere prin UDP
 Socket_Server.bind(("0.0.0.0", Server_Port)) # Atasez portul de coap pentru server
 
-#client.sendto(packet,("255.255.255.255", Server_Port))
+client.sendto(packet,("127.0.0.1", Server_Port))
 
 
 

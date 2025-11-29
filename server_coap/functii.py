@@ -269,6 +269,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                     "status": "error",
                     "message": "Path is not a directory"
                 }).encode("utf-8")
+                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
             return
 
         items = []
