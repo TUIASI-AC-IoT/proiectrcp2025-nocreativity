@@ -1,9 +1,8 @@
-from functii import upload_request
 import json
 import struct
+import functii
 
 PAYLOAD_MARKER = 0xFF # arată inceputul payloadului
-
 
 
 def parse_coap_header(data):
@@ -46,37 +45,6 @@ def parse_packet(data):
 
     return header, payload
 
-'''
-def build_and_send_acknowledgement(sock, client_addr, msg_id, info="OK"):
-    """
-    Trimite un mesaj CoAP de tip ACK (type = 2) către clientul care a trimis un CON.
-
-    sock        -> socket-ul UDP deja deschis
-    client_addr -> (ip, port) al clientului
-    msg_id      -> Message ID al cererii originale , !!!trebuie să fie același
-    info        -> mesaj JSON trimis în payload
-    """
-
-    # --- Header CoAP ---
-    version = 1
-    msg_type = 2  # ACK
-    tkl = 0
-    code = 69  # 2.05 Content (răspuns OK)
-    first_byte = (version << 6) | (msg_type << 4) | tkl #primul byte din header
-
-    header = struct.pack("!BBH", first_byte, code, msg_id) #transforma in bytes headerul; !BBH, ! = ordinea Big Endian network order, B = unsigned char (1 byte), H = unsigned Short (2 bytes)
-
-    # --- Payload JSON ---
-    payload = json.dumps({"response": info}).encode("utf-8")
-
-    # --- Pachet final ---
-    packet = header + bytes([PAYLOAD_MARKER]) + payload
-
-    # --- Trimitem pachetul ---
-    sock.sendto(packet, client_addr)
-    print(f"[<] Trimis ACK către {client_addr} (msg_id={msg_id}, code={code})")
-
-'''
 
 
 def handle_request(header, payload, client_addr, sock):
@@ -84,13 +52,27 @@ def handle_request(header, payload, client_addr, sock):
     code = header.get("code")
     msg_type=header.get("type")
     msg_id=header.get("message_id")
-    
+
+    print(f"Cerere primita: code={code}, type={msg_type}, msg_id={msg_id}")
+    print(f"De la: {client_addr}")
+    print(f"Payload: {payload}")
+
     if code == 1:
-        print("download fisier")
+        path = payload.get("path", "")
+        if path.endswith("/"):
+            print("Procesare: Listare director")
+            functii.listare_director(payload,msg_type,msg_id,client_addr, sock)
+        else:
+            print("Procesare: Download fisier")
+            functii.download_request(payload,msg_type,msg_id,client_addr, sock)
     elif code == 2:
-        print("upload fisier")
-        upload_request(payload,msg_type,msg_id,client_addr, sock)
+        print("Procesare: Upload fisier")
+        functii.upload_request(payload,msg_type,msg_id,client_addr, sock)
     elif code == 4:
-        print("delete fisier")
+        print("Procesare: Delete fisier")
+        functii.delete_request(payload,msg_type,msg_id,client_addr, sock)
+    elif code == 5:
+        print("Procesare: Mutare fisier")
+        functii.move_request(payload,msg_type,msg_id,client_addr, sock)
     else:
-        print("cod necunoscut!")
+        print(f"cod necunoscut! {code}")
