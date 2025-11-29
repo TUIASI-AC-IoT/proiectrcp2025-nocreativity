@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print(Server_Ip)
 
     while True:
-        data,addr_client = Socket_Server.recvfrom(1024)
+        data,addr_client = Socket_Server.recvfrom(65535)
         header, payload = Pachet.parse_packet(data)
         print("header:",header)
         print("payload:",payload)

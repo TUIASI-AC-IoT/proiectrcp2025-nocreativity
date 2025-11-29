@@ -1,3 +1,4 @@
+from functii import upload_request
 import json
 import struct
 
@@ -44,7 +45,7 @@ def parse_packet(data):
 
     return header, payload
 
-
+'''
 def build_and_send_acknowledgement(sock, client_addr, msg_id, info="OK"):
     """
     Trimite un mesaj CoAP de tip ACK (type = 2) către clientul care a trimis un CON.
@@ -74,21 +75,21 @@ def build_and_send_acknowledgement(sock, client_addr, msg_id, info="OK"):
     sock.sendto(packet, client_addr)
     print(f"[<] Trimis ACK către {client_addr} (msg_id={msg_id}, code={code})")
 
+'''
+
 
 def handle_request(header, payload, client_addr, sock):
     """Procesează cererea primită în funcție de codul CoAP"""
     code = header.get("code")
-    msg_type = header.get("type")
-    msg_id = header.get("message_id")
-    if msg_type == 0:
-        build_and_send_acknowledgement(sock, client_addr, msg_id) #trimite acknpwledge catre client
+    msg_type=header.get("type")
+    msg_id=header.get("message_id")
+    
     if code == 1:
         print("download fisier")
     elif code == 2:
         print("upload fisier")
+        upload_request(payload,msg_type,msg_id,client_addr, sock)
     elif code == 4:
         print("delete fisier")
-    elif code == 5:
-        print("move fisier")
     else:
         print("cod necunoscut!")
