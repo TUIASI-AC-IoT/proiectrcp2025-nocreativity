@@ -5,6 +5,7 @@ import struct
 PAYLOAD_MARKER = 0xFF # arată inceputul payloadului
 
 
+
 def parse_coap_header(data):
     """Parsează primii 4 bytes ai headerului CoAP"""
     if len(data) < 4:
