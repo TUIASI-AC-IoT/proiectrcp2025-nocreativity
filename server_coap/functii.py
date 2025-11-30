@@ -3,6 +3,7 @@ import shutil
 import struct
 import json
 import base64
+import fragmentare_pachet as f
 PAYLOAD_MARKER = 0xFF
 
 STORAGE = "storage" # directorul de baza pentru stocare
@@ -10,6 +11,7 @@ STORAGE = "storage" # directorul de baza pentru stocare
 #coduri de raspuns si eroare
 COAP = {
     "CREATED": 65,         # 2.01
+    "DELETED": 66,         # 2.02
     "CONTENT": 69,         # 2.05
     "BAD_REQUEST": 128,    # 4.00  LIPSA PAYLOAD-ULUI ACOLO UNDE ESTE NECESAR
     "NOT_FOUND": 132,      # 4.04  PATH-UL FURNIZAT DE UTILIZATOR NU CORESPUNDE CERINTEI APLICATIEI 
@@ -89,7 +91,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_PROCESSABLE"])
+            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(file_path):
@@ -100,6 +102,11 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
             }).encode("utf-8")
             build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
+
+    if fragmentare.is_fragmented_upload(payload):
+        f.handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock)
+    else:
+        f.handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock)
 
     try:
         #decodare base64
@@ -131,7 +138,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Payload gresit"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_PROCESSABLE"])
+            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
 
 
 """
@@ -324,7 +331,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_PROCESSABLE"])
+            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(file_path):
@@ -395,7 +402,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_PROCESSABLE"])
+            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(source) or not valideaza_director(destination):
