@@ -1,8 +1,8 @@
 import json
 import struct
-#import base64
+import math
 
-MAX_SIZE_PACHET = 65535
+MAX_SIZE_PACHET = 1400
 HEADER_SIZE = 4
 PAYLOAD_MARKER_SIZE = 1
 FRAGMENT_OVERHEAD = 200 #spatiu pentru metadata JSON
@@ -13,10 +13,10 @@ PAYLOAD_MARKER = 0xFF
 
 def fragmente_necesare(content_b64):
     content_size = len(content_b64)
-    if content_size <= MAX_SIZE_PACHET:
+    if content_size <= MAX_PAYLOAD_SIZE:
         return 1
 
-    return (content_size  + MAX_PAYLOAD_SIZE - 1)
+    return math.ceil(content_size / MAX_PAYLOAD_SIZE)
 
 def split_payload(content_b64,path):
     total_fragments = fragmente_necesare(content_b64)
@@ -61,7 +61,7 @@ def build_fragment_pachet(code, fragment_payload, msg_id, msg_type=0):
     return pachet
 
 def is_fragment_upload(payload):
-    return "fragment" in payload
+    return isinstance(payload, dict) and "fragment" in payload
 
 def get_fragment_info(payload):
     if not is_fragment_upload(payload):
@@ -88,18 +88,24 @@ class AsamblareFragment:
         self.fragments[path][index] = content
 
         if len(self.fragments[path]) == total:
-            assembled = ""
+            assembled = []
             for i in range (total):
                 if i not in self.fragments[path]:
                     return (False, None)
-                assembled += self.fragments[path][i]
+                assembled.append(self.fragments[path][i])
+
+            assembled_content = "".join(assembled)
 
             del self.fragments[path]
             del self.expected_total[path]
 
-            return (True, assembled)
+            return (True, assembled_content)
 
         return (False, None)
+
+
+    def assemble_content(self, path, index, total, content):
+        return self.add_fragment(path, index, total, content)
 
     def get_progress(self, path):
         if path not in self.fragments:

@@ -6,17 +6,17 @@ import fragmentare_pachet as f
 import base64
 import json
 
-TEXT = "Hello guyes" * 1000
+TEXT = "Hello guyes" * 6000
 
 content_b64 = base64.b64encode(TEXT.encode("utf-8")).decode("utf-8")
 
 fragments = f.split_payload(content_b64, "storage/big.txt")
 
-packet = b'\x40\x02\x04\xD2' + b'\xFF' + \
-    json.dumps({
-        "path": "storage/test/hello.txt",
-        "content": content_b64
-    }).encode("utf-8")
+# packet = b'\x40\x02\x04\xD2' + b'\xFF' + \
+#     json.dumps({
+#         "path": "storage/test/hello.txt",
+#         "content": content_b64
+#     }).encode("utf-8")
 
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -28,10 +28,9 @@ Socket_Server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # setez la tra
 Socket_Server.bind(("0.0.0.0", Server_Port)) # Atasez portul de coap pentru server
 
 #client.sendto(packet,("127.0.0.1", Server_Port))
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 for i, frag in enumerate(fragments):
     packet = f.build_fragment_pachet(2, frag, 5000 + i)
-    sock.sendto(packet, ("127.0.0.1", 5683))
+    client.sendto(packet, ("127.0.0.1", 5683))
     print(f"Fragment {i+1}/{len(fragments)} trimis")
 
 
