@@ -119,8 +119,11 @@ def handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock
         #creare director parinte
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
+        with open(file_path, "wb") as file:
+            file.write(file_bytes)
+            """urmatoarele 2 linii de cod sunt necesare pentru adaugarea fisierului cand serverul e pornit"""
+            file.flush()
+            os.fsync(file.fileno())
 
         file_size = os.path.getsize(file_path)
 
@@ -175,6 +178,9 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
 
             with open(file_path, "wb") as file:
                 file.write(file_bytes)
+                """urmatoarele 2 linii de cod sunt necesare pentru adaugarea fisierului cand serverul e pornit"""
+                file.flush()
+                os.fsync(file.fileno())
 
             file_size = os.path.getsize(file_path)
 

@@ -1,8 +1,9 @@
 import json
 import struct
 import math
+import threading
 
-MAX_SIZE_PACHET = 1400
+MAX_SIZE_PACHET = 14000
 HEADER_SIZE = 4
 PAYLOAD_MARKER_SIZE = 1
 FRAGMENT_OVERHEAD = 200 #spatiu pentru metadata JSON

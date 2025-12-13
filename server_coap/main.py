@@ -1,54 +1,85 @@
 import socket
+import json
+import base64
+import threading
 import time
 
-import Pachet
-import fragmentare_pachet as f
-import base64
-import json
+from Pachet import handle_request, parse_packet, exista_storage
+import threading_manager as tm
 
-TEXT = "Hello guyes" * 6000
+SERVER_PORT = 5683
 
-content_b64 = base64.b64encode(TEXT.encode("utf-8")).decode("utf-8")
+# Socket server
+server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_sock.bind(("0.0.0.0", SERVER_PORT))
 
-fragments = f.split_payload(content_b64, "storage/big.txt")
+exista_storage()
+manager = tm.get_manager()
 
-# packet = b'\x40\x02\x04\xD2' + b'\xFF' + \
-#     json.dumps({
-#         "path": "storage/test/hello.txt",
-#         "content": content_b64
-#     }).encode("utf-8")
-
-client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-Server_Ip = socket.gethostbyname(socket.gethostname()) #ia ip-ul hostului, in cazul dat laptopul personal
-Server_Port = 5683 # portul predestinat unencrypted CoAP
-
-Socket_Server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # setez la transmitere prin UDP
-Socket_Server.bind(("0.0.0.0", Server_Port)) # Atasez portul de coap pentru server
-
-#client.sendto(packet,("127.0.0.1", Server_Port))
-for i, frag in enumerate(fragments):
-    packet = f.build_fragment_pachet(2, frag, 5000 + i)
-    client.sendto(packet, ("127.0.0.1", 5683))
-    print(f"Fragment {i+1}/{len(fragments)} trimis")
+print(f"[*] Server CoAP pornit pe port {SERVER_PORT}")
+print(f"[*] Așteaptă cereri... (Ctrl+C pentru oprire)\n")
 
 
-if __name__ == '__main__':
-    print(Server_Ip)
+def test_client():
+    # Așteptăm sa se porneasca serverul
+    time.sleep(2)
 
+    # NU fac bind() pe client, las  OS-ul sa aleaga portul
+    client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_sock.settimeout(5.0)
+
+    test_content = "Salut din test! Fișier uploadat automat la pornire.".encode("utf-8")
+    content_b64 = base64.b64encode(test_content).decode("utf-8")
+
+    payload_json = json.dumps({
+        "path": "storage/test_upload_automat.txt",
+        "content": content_b64
+    }).encode("utf-8")
+
+    # Header CoAP: Ver=1, Type=0 (CON), TKL=0, Code=0.02 (POST), Message ID=12345
+    header = bytes([0x40, 0x02, 0x30, 0x39])  # MsgID = 12345 (0x3039)
+    packet = header + bytes([0xFF]) + payload_json
+
+    print("[TEST] Trimit pachet upload de test către server...\n")
+
+    try:
+        client_sock.sendto(packet, ("127.0.0.1", SERVER_PORT))
+        print("[TEST] Pachet trimis cu succes ,fără eroare la sendto ")
+
+        # Așteptăm răspunsul
+        data, addr = client_sock.recvfrom(65535)
+        header_resp, resp_payload = parse_packet(data)
+
+        print(f"[TEST] Răspuns primit de la server:")
+        print(f"    Code: {header_resp['code']} ({'2.01 Created' if header_resp['code'] == 65 else 'Eroare'})")
+        print(f"    Payload: {resp_payload}")
+
+        if resp_payload.get("status") == "created":
+            print(f"\n[TEST] SUCCESS! Fișierul a fost creat: {resp_payload.get('path')}")
+            print(f"    Dimensiune: {resp_payload.get('size')} bytes")
+        else:
+            print(f"\n[TEST] Eroare la creare fișier: {resp_payload}")
+
+    except socket.timeout:
+        print("[TEST] Timeout – serverul nu a răspuns la timp")
+    except Exception as e:
+        print(f"[TEST] Eroare neașteptată: {type(e).__name__}: {e}")
+    finally:
+        client_sock.close()
+
+
+# Pornim testul în thread separat
+threading.Thread(target=test_client, daemon=True).start()
+
+# Bucla principală server
+try:
     while True:
-        data,addr_client = Socket_Server.recvfrom(65535)
-        header, payload = Pachet.parse_packet(data)
-        print("header:",header)
-        print("payload:",payload)
-        #Pachet.build_and_send_acknowledgement(Socket_Server,addr_client,1,"OK")
-        Pachet.handle_request(header, payload, addr_client, Socket_Server)
-        time.sleep(1)
-        #datac,addr_server = client.recvfrom(1024)
-        #header1,payload1 = Pachet.parse_packet(datac)
-        #print("header1:",header1)
-        #print("payload1:",payload1)
-        #Pachet.handle_request(header,payload,addr_client,Socket_Server)
-        time.sleep(1)
+        data, client_addr = server_sock.recvfrom(65535)
+        header, payload = parse_packet(data)
+        handle_request(header, payload, client_addr, server_sock)
 
+except KeyboardInterrupt:
+    print("\n[*] Oprire server...")
+finally:
+    tm.shutdown_manager()
+    server_sock.close()
