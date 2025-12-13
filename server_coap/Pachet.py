@@ -92,15 +92,15 @@ def handle_request(header, payload, client_addr, sock):
     msg_type = header.get("type")
     msg_id = header.get("message_id")
 
-    # Verificăm dacă este un ACK pentru un fragment
-    if is_ack_packet(header):
-        print(f"[>] ACK primit de la {client_addr} (msg_id={msg_id})")
-
-        # Procesăm ACK-ul pentru fragmentare
-        f.process_fragment_ack(client_addr, msg_id)
-
-        # Nu mai procesăm ca cerere normală
-        return
+    # # Verificăm dacă este un ACK pentru un fragment
+    # if is_ack_packet(header):
+    #     print(f"[>] ACK primit de la {client_addr} (msg_id={msg_id})")
+    #
+    #     # Procesăm ACK-ul pentru fragmentare
+    #     f.process_fragment_ack(client_addr, msg_id)
+    #
+    #     # Nu mai procesăm ca cerere normală
+    #     return
 
     # Log cerere
     print(f"\n[>] Cerere primită în Main Thread de la {client_addr}")

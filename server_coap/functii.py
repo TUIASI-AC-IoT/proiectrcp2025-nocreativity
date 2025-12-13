@@ -3,7 +3,7 @@ import shutil
 import struct
 import json
 import base64
-import fragmentare_pachet as f
+import fragmentare_pachet as frag
 
 
 PAYLOAD_MARKER = 0xFF
@@ -105,7 +105,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
             build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
-    if f.is_fragment_upload(payload):
+    if frag.is_fragment_upload(payload):
         handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock)
     else:
         handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock)
@@ -151,11 +151,11 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
     file_path = payload.get("path")
     content = payload.get("content")
 
-    index, total, size = f.get_fragment_info(payload)
+    index, total, size = frag.get_fragment_info(payload)
 
     print(f"Fragment primit: {index + 1}/{total} pentru {file_path}")
 
-    is_complete, assembled_content = f.assembler.assemble_content(
+    is_complete, assembled_content = frag.assembler.assemble_content(
         file_path,index,total,content
     )
 
@@ -166,7 +166,7 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
                 "index": index,
                 "total": total
             },
-            "progress": f.assembler.get_progress(file_path)
+            "progress": frag.assembler.get_progress(file_path)
         }).encode("utf-8")
         build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
 
@@ -196,7 +196,7 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
 
         except Exception as e:
             print(f"Error assamblare fragmente: {e}")
-            f.assembler.clear_path(file_path)
+            frag.assembler.clear_path(file_path)
             if msg_type == 0:
                 ack_payload = json.dumps({
                     "status": "error",
@@ -273,7 +273,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
         file_name = os.path.basename(file_path)
 
         # Verificăm dacă e nevoie de fragmentare
-        fragments_needed = f.fragmente_necesare(content_b64)
+        fragments_needed = frag.fragmente_necesare(content_b64)
 
         if fragments_needed > 1:
             # Download fragmentat
@@ -290,7 +290,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 build_and_send_acknowledgement(sock, client_addr, msg_id, info_payload, COAP["CONTENT"])
 
             # Trimitem fragmentele
-            f.handle_fragmented_download(file_path, content_b64, sock, client_addr, msg_id + 1)
+            frag.handle_fragmented_download(file_path, content_b64, sock, client_addr, msg_id + 1)
 
             print(f"[+] Download fragmentat complet: {file_path}")
         else:
