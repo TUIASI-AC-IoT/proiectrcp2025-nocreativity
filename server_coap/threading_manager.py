@@ -126,7 +126,7 @@ class ResponseWorker(threading.Thread):
                     # Trimitem pachetul
                     sock.sendto(packet, client_addr)
 
-                    print(f"[<] Răspuns trimis către {client_addr}")
+                    print(f"[<] DE LA WORKER Răspuns trimis către {client_addr}")
 
                 except Exception as e:
                     print(f"[!] Eroare trimitere răspuns: {e}")

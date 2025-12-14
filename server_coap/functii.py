@@ -4,7 +4,7 @@ import struct
 import json
 import base64
 import fragmentare_pachet as frag
-
+from threading_manager import get_manager
 
 PAYLOAD_MARKER = 0xFF
 
@@ -35,36 +35,30 @@ def valideaza_director(file_path):
     path = file_path.split("/")
     return path[0] == STORAGE
 
-
-
-def build_and_send_acknowledgement(sock, client_addr, msg_id, new_payload ,new_code = 69):
+def build_and_submit_acknowledgement(sock, client_addr, msg_id, new_payload, new_code=69):
     """
-    Trimite un mesaj CoAP de tip ACK (type = 2) către clientul care a trimis un CON.
+    Construiește un mesaj CoAP de tip ACK (type = 2) și îl trimite 
+    către ResponseWorker (prin ThreadingManager) pentru trimitere.
+    """
     
-    sock        -> socket-ul UDP deja deschis
-    client_addr -> (ip, port) al clientului
-    msg_id      -> Message ID al cererii originale (trebuie să fie același!)
-    info        -> mesaj text/JSON trimis în payload (opțional)
-    """
-
-    # Header CoAP 
+    # Header CoAP - Construcția rămâne la fel
     version = 1
     msg_type = 2       # ACK
     tkl = 0
-    code = new_code       
+    code = new_code    
     first_byte = (version << 6) | (msg_type << 4) | tkl
 
     header = struct.pack("!BBH", first_byte, code, msg_id)
 
-    # Payload JSON 
-    payload = new_payload
-
     # Pachet final
-    packet = header + bytes([PAYLOAD_MARKER]) + payload
+    packet = header + bytes([PAYLOAD_MARKER]) + new_payload
 
-    # Trimitem pachetul 
-    sock.sendto(packet, client_addr)
-    print(f"[<] Trimis ACK către {client_addr} (msg_id={msg_id}, code={code})")
+    # Prin ThreadingManager, punem pachetul ack in response_queue (ResponseWorker)
+    get_manager().submit_response(sock, client_addr, packet)
+
+
+
+
 
 
 
@@ -80,7 +74,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Payload required"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["BAD_REQUEST"])
+            build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["BAD_REQUEST"])
         return
 
     file_path = payload.get("path")
@@ -93,7 +87,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(file_path):
@@ -102,7 +96,7 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Payload gresit"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     if frag.is_fragment_upload(payload):
@@ -134,7 +128,7 @@ def handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock
         }).encode("utf-8")
 
         if msg_type == 0:
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CREATED"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CREATED"])
 
         print(f"Fisier creat: {file_path} ({file_size} bytes)")
 
@@ -145,7 +139,7 @@ def handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock
                 "status": "error",
                 "message": "Payload gresit"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
 
 def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
     file_path = payload.get("path")
@@ -168,7 +162,7 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
             },
             "progress": frag.assembler.get_progress(file_path)
         }).encode("utf-8")
-        build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
+        build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
 
     if is_complete:
         try:
@@ -202,7 +196,7 @@ def handle_fragmented_upload(payload, msg_type, msg_id, client_addr, sock):
                     "status": "error",
                     "message": f"Assembly failed: {str(e)}"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
+                build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
 
 
 """
@@ -218,7 +212,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 "status": "error",
                 "message": "Payload required"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["BAD_REQUEST"])
+            build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["BAD_REQUEST"])
         return
 
     file_path = payload.get("path")
@@ -230,7 +224,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["UNPROCESSABLE"])
+            build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["UNPROCESSABLE"])
         return
 
     # Validare path
@@ -240,7 +234,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 "status": "error",
                 "message": "Unable to execute"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
         return
 
     try:
@@ -251,7 +245,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                     "status": "error",
                     "message": "File not found"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
             return
 
         if not os.path.isfile(file_path):
@@ -260,7 +254,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                     "status": "error",
                     "message": "Path is not a file"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["NOT_FOUND"])
             return
 
         # Citire fișier
@@ -287,7 +281,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                     "fragmented": True,
                     "total_fragments": fragments_needed
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock, client_addr, msg_id, info_payload, COAP["CONTENT"])
+                build_and_submit_acknowledgement(sock, client_addr, msg_id, info_payload, COAP["CONTENT"])
 
             # Trimitem fragmentele
             frag.handle_fragmented_download(file_path, content_b64, sock, client_addr, msg_id + 1)
@@ -302,7 +296,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
             }).encode("utf-8")
 
             if msg_type == 0:
-                build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["CONTENT"])
+                build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["CONTENT"])
 
             print(f"[+] Fișier descărcat: {file_path} ({file_size} bytes)")
 
@@ -313,7 +307,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 "status": "error",
                 "message": str(e)
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["SERVER_ERROR"])
+            build_and_submit_acknowledgement(sock, client_addr, msg_id, ack_payload, COAP["SERVER_ERROR"])
 
 """
     LISTARE DIRECTOR
@@ -326,7 +320,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Payload required"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     dir_path = payload.get("path" , "")
@@ -338,7 +332,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     if dir_path == "storage/" or dir_path == "storage":
@@ -349,7 +343,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": "Unable to execute"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     try:
@@ -359,7 +353,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                     "status": "error",
                     "message": "Directory not found"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
             return
 
         if not os.path.isdir(dir_path):
@@ -368,7 +362,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                     "status": "error",
                     "message": "Path is not a directory"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
             return
 
         items = []
@@ -386,7 +380,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
         }).encode("utf-8")
 
         if msg_type == 0:
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
 
         print(f"Director listat: {dir_path}")
 
@@ -397,7 +391,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
                 "status": "error",
                 "message": str(e)
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
 
 
 """
@@ -411,7 +405,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Payload required"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     file_path = payload.get("path")
@@ -423,7 +417,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(file_path):
@@ -432,7 +426,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Unable to execute"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     try:
@@ -442,7 +436,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                     "status": "error",
                     "message": "Path not found"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
             return
 
         if os.path.isfile(file_path):
@@ -458,7 +452,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
         }).encode("utf-8")
 
         if msg_type == 0:
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["DELETED"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["DELETED"])
 
     except Exception as e:
         print(f"Error delete: {e}")
@@ -467,7 +461,7 @@ def delete_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": str(e)
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
 
 
 """
@@ -481,7 +475,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Payload required"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     source = payload.get("source")
@@ -494,7 +488,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Missing fields"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["UNPROCESSABLE"])
         return
 
     if not valideaza_director(source) or not valideaza_director(destination):
@@ -503,7 +497,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": "Unable to execute"
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
         return
 
     try:
@@ -513,7 +507,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                     "status": "error",
                     "message": "Source not found"
                 }).encode("utf-8")
-                build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
+                build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["NOT_FOUND"])
             return
 
         os.makedirs(os.path.dirname(destination), exist_ok=True)
@@ -527,7 +521,7 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
         }).encode("utf-8")
 
         if msg_type == 0:
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["MOVED"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["MOVED"])
 
         print(f"Fisier mutat: {source} -> {destination}")
 
@@ -538,4 +532,4 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "status": "error",
                 "message": str(e)
             }).encode("utf-8")
-            build_and_send_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
+            build_and_submit_acknowledgement(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
