@@ -1,7 +1,7 @@
 import json
 import struct
 import math
-import socket
+import queue
 import time
 
 MAX_SIZE_PACHET = 14000
@@ -9,9 +9,11 @@ HEADER_SIZE = 4
 PAYLOAD_MARKER_SIZE = 1
 FRAGMENT_OVERHEAD = 200 #spatiu pentru metadata JSON
 
-MAX_PAYLOAD_SIZE = MAX_SIZE_PACHET - HEADER_SIZE - PAYLOAD_MARKER_SIZE - FRAGMENT_OVERHEAD
+RAW_MAX = 14000 - 4 - 1 - 200
+MAX_PAYLOAD_SIZE = RAW_MAX - (RAW_MAX % 4)
 
 PAYLOAD_MARKER = 0xFF
+
 
 def fragmente_necesare(content_b64):
     content_size = len(content_b64)
@@ -20,32 +22,54 @@ def fragmente_necesare(content_b64):
 
     return math.ceil(content_size / MAX_PAYLOAD_SIZE)
 
-def split_payload(content_b64,path):
-    total_fragments = fragmente_necesare(content_b64)
 
-    if total_fragments == 1:
+def split_payload(content_b64, path):
+    """
+    Împarte conținutul base64 pe fragmente.
+    """
+
+    chunk_size = MAX_PAYLOAD_SIZE
+
+    print(f"[DEBUG split_payload] Lungime base64: {len(content_b64)} caractere")
+    print(f"[DEBUG] Chunk size: {chunk_size}")
+
+    # Dacă încap într-un singur fragment
+    if len(content_b64) <= chunk_size:
         return [{
             "path": path,
             "content": content_b64,
+            "fragment": {
+                "index": 0,
+                "total": 1,
+                "size": len(content_b64)
+            }
         }]
+
+    # Calculează numărul de fragmente
+    total_fragments = math.ceil(len(content_b64) / chunk_size)
 
     fragments = []
 
-    for i in range (total_fragments):
-        start = i*MAX_PAYLOAD_SIZE
-        end = min(start+MAX_PAYLOAD_SIZE, len(content_b64))
+    for i in range(total_fragments):
+        start = i * chunk_size
+        end = min(start + chunk_size, len(content_b64))
 
-        fragment_payload = {
+        fragment_content = content_b64[start:end]
+
+        fragments.append({
             "path": path,
-            "content": content_b64[start:end],
+            "content": fragment_content,
             "fragment": {
                 "index": i,
                 "total": total_fragments,
-                "size": len(content_b64[start:end])
+                "size": len(fragment_content)
             }
-        }
+        })
 
-        fragments.append(fragment_payload)
+        print(f"[DEBUG] Fragment {i}: {len(fragment_content)} caractere (start={start}, end={end})")
+
+    total_length = sum(len(f["content"]) for f in fragments)
+    print(f"[DEBUG] Total fragmente: {total_fragments}, total caractere: {total_length}")
 
     return fragments
 
@@ -133,14 +157,15 @@ class AsamblareFragment:
 assembler = AsamblareFragment()
 
 
-def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, msg_id_base):
+
+def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, msg_id_base, packet_queue):
     fragments = split_payload(file_content_b64, file_path)
     total_fragments = len(fragments)
 
     print(f"[+] Download fragmentat început: {total_fragments} fragmente către {client_addr}")
 
     original_timeout = sock.gettimeout()
-    sock.settimeout(5.0)
+    sock.settimeout(None)
 
     try:
         for i in range(total_fragments):
@@ -154,21 +179,34 @@ def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, m
                 sock.sendto(packet, client_addr)
                 print(f"    → Trimis fragment {i + 1}/{total_fragments} (msg_id={msg_id}, încercare {attempts + 1})")
 
-                try:
-                    data, addr = sock.recvfrom(65535)
-                    if addr != client_addr:
+                # Așteptăm ACK-ul din coada globală
+                ack_received = False
+                start_time = time.time()
+
+                while time.time() - start_time < 5.0:
+                    try:
+                        data, addr = packet_queue.get(timeout=0.5)
+                        if addr != client_addr:
+                            packet_queue.put((data, addr))
+                            continue
+
+                        if len(data) < 4:
+                            continue
+
+                        recv_type = (data[0] >> 4) & 0x03
+                        recv_msg_id = (data[2] << 8) | data[3]
+
+                        if recv_type == 2 and recv_msg_id == msg_id:
+                            print(f"    ← ACK primit pentru fragment {i + 1}/{total_fragments}")
+                            ack_received = True
+                            break
+
+                    except queue.Empty:
                         continue
-                    if len(data) < 4:
-                        continue
 
-                    recv_type = (data[0] >> 4) & 0x03
-                    recv_msg_id = (data[2] << 8) | data[3]
-
-                    if recv_type == 2 and recv_msg_id == msg_id:
-                        print(f"    ← ACK primit pentru fragment {i + 1}/{total_fragments}")
-                        break
-
-                except socket.timeout:
+                if ack_received:
+                    break
+                else:
                     attempts += 1
                     print(f"    Timeout – retransmit fragment {i + 1}/{total_fragments} ({attempts}/{max_attempts})")
 
@@ -183,7 +221,6 @@ def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, m
         print(f"[!] Eroare în download fragmentat: {e}")
         return False
     finally:
-        # SIGUR: restaurăm timeout-ul doar dacă socket-ul e valid
         try:
             sock.settimeout(original_timeout)
         except:

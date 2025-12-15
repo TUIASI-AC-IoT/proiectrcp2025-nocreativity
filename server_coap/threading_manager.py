@@ -1,34 +1,6 @@
-"""
-Manager pentru threading conform arhitecturii din documentație
-
-ARHITECTURĂ:
-Main Thread → Thread Procesare Cereri → Thread I/O Fișiere + Thread Răspuns
-
-Main Thread:
-- Ascultă socket UDP în loop infinit
-- Pentru fiecare pachet primit, creează Thread de Procesare
-
-Thread Procesare Cereri:
-- Decodifică pachetul CoAP
-- Identifică metoda (GET, POST, DELETE, etc.)
-- Creează Thread pentru operații I/O (dacă e necesar)
-- Creează Thread pentru răspuns
-
-Thread I/O Fișiere:
-- Execută operații de citire/scriere/ștergere fișiere
-- Nu blochează thread-ul principal
-- Returnează rezultatul către Thread Răspuns
-
-Thread Răspuns:
-- Așteaptă rezultatul de la Thread I/O
-- Construiește pachetul de răspuns
-- Trimite ACK/Response către client
-"""
-
 import threading
 import queue
 import time
-from typing import Callable, Any, Dict
 
 
 class RequestTask:
@@ -73,19 +45,15 @@ class IOWorker(threading.Thread):
         """Loop principal pentru procesare operații I/O"""
         while self.running:
             try:
-                # Așteptăm un task (cu timeout pentru a verifica self.running)
                 task_func, args, callback = self.task_queue.get(timeout=1.0)
 
                 try:
-                    # Executăm operația I/O
                     result = task_func(*args)
 
-                    # Apelăm callback-ul cu rezultatul
                     if callback:
                         callback(result, None)
 
                 except Exception as e:
-                    # Raportăm eroarea
                     if callback:
                         callback(None, e)
 
@@ -94,6 +62,8 @@ class IOWorker(threading.Thread):
 
             except queue.Empty:
                 continue
+            except Exception as e:
+                print(f"[!] Eroare critică în IOWorker: {e}")
 
     def stop(self):
         """Oprește worker-ul"""
@@ -115,7 +85,6 @@ class ResponseWorker(threading.Thread):
         """Loop principal pentru trimitere răspunsuri"""
         while self.running:
             try:
-                # Așteptăm un răspuns de trimis
                 response_data = self.response_queue.get(timeout=1.0)
 
                 try:
@@ -123,9 +92,7 @@ class ResponseWorker(threading.Thread):
                     client_addr = response_data['client_addr']
                     packet = response_data['packet']
 
-                    # Trimitem pachetul
                     sock.sendto(packet, client_addr)
-
                     print(f"[<] Răspuns trimis către {client_addr}")
 
                 except Exception as e:
@@ -136,6 +103,8 @@ class ResponseWorker(threading.Thread):
 
             except queue.Empty:
                 continue
+            except Exception as e:
+                print(f"[!] Eroare critică în ResponseWorker: {e}")
 
     def stop(self):
         """Oprește worker-ul"""
@@ -143,35 +112,41 @@ class ResponseWorker(threading.Thread):
 
 
 class RequestProcessor(threading.Thread):
-    """
-    Thread pentru procesarea unei cereri individuale
-    Conform schemei: Decodifică → Identifică metoda → Creează thread-uri I/O și Răspuns
-    """
+    """Thread dedicat pentru procesarea unei singure cereri"""
 
-    def __init__(self, task, io_queue, response_queue, handler_func):
+    def __init__(self, task, io_queue, response_queue, handler_func, extra_args=None):
         super().__init__(daemon=True, name=f"RequestProcessor-{task.client_addr}")
         self.task = task
         self.io_queue = io_queue
         self.response_queue = response_queue
         self.handler_func = handler_func
+        self.extra_args = extra_args or ()
 
     def run(self):
-        """Procesează cererea"""
         try:
             print(f"\n[*] Thread procesare pentru {self.task.client_addr}")
             print(f"    Code: {self.task.header.get('code')}")
             print(f"    Message ID: {self.task.header.get('message_id')}")
 
-            # Apelăm handler-ul care va folosi io_queue pentru operații I/O
-            # și response_queue pentru a trimite răspunsuri
-            self.handler_func(
-                self.task.header,
-                self.task.payload,
-                self.task.client_addr,
-                self.task.sock,
-                self.io_queue,
-                self.response_queue
-            )
+            if self.extra_args:
+                self.handler_func(
+                    self.task.header,
+                    self.task.payload,
+                    self.task.client_addr,
+                    self.task.sock,
+                    self.io_queue,
+                    self.response_queue,
+                    *self.extra_args
+                )
+            else:
+                self.handler_func(
+                    self.task.header,
+                    self.task.payload,
+                    self.task.client_addr,
+                    self.task.sock,
+                    self.io_queue,
+                    self.response_queue
+                )
 
         except Exception as e:
             print(f"[!] Eroare în RequestProcessor: {e}")
@@ -190,11 +165,9 @@ class ThreadingManager:
     """
 
     def __init__(self, num_io_workers=4, num_response_workers=2):
-        # Cozi pentru comunicare între thread-uri
         self.io_queue = queue.Queue()
         self.response_queue = queue.Queue()
 
-        # Pool-uri de worker threads
         self.io_workers = []
         self.response_workers = []
 
@@ -212,48 +185,43 @@ class ThreadingManager:
             self.response_workers.append(worker)
             print(f"[+] Pornit ResponseWorker-{i}")
 
-        # Tracking pentru thread-uri active
+        # Tracking pentru thread-uri active - OPTIMIZAT
         self.active_processors = []
         self.lock = threading.Lock()
+        self.last_cleanup = time.time()
+        self.cleanup_interval = 10.0  # Curățare la fiecare 10 secunde
 
-    def submit_request(self, header, payload, client_addr, sock, handler_func):
-        """
-        Submitează o cerere nouă pentru procesare
-
-        Creează un Thread de Procesare Cereri conform schemei din documentație
-
-        Args:
-            header: Header-ul pachetului CoAP
-            payload: Payload-ul JSON
-            client_addr: Adresa clientului
-            sock: Socket-ul serverului
-            handler_func: Funcția care procesează cererea
-        """
-        # Creăm task-ul
+    def submit_request(self, header, payload, client_addr, sock, handler_func, extra_args=None):
+        """Submitează o cerere pentru procesare"""
         task = RequestTask(header, payload, client_addr, sock)
-
-        # Creăm Thread de Procesare pentru această cerere
         processor = RequestProcessor(
             task,
             self.io_queue,
             self.response_queue,
-            handler_func
+            handler_func,
+            extra_args
         )
 
-        # Salvăm referința
         with self.lock:
             self.active_processors.append(processor)
 
-        # Pornim thread-ul
         processor.start()
 
-        # Curățăm thread-urile terminate (non-blocking)
-        self._cleanup_processors()
+        # OPTIMIZAT: Curățare periodică, nu la fiecare cerere
+        current_time = time.time()
+        if current_time - self.last_cleanup > self.cleanup_interval:
+            self._cleanup_processors()
+            self.last_cleanup = current_time
 
     def _cleanup_processors(self):
-        """Curăță thread-urile de procesare terminate"""
+        """Curăță thread-urile de procesare terminate - OPTIMIZAT"""
         with self.lock:
+            before = len(self.active_processors)
             self.active_processors = [p for p in self.active_processors if p.is_alive()]
+            after = len(self.active_processors)
+
+            if before != after:
+                print(f"[*] Cleanup: {before - after} thread-uri terminate curățate")
 
     def submit_io_operation(self, operation_func, args, callback):
         """
@@ -296,6 +264,9 @@ class ThreadingManager:
         """Oprește toate thread-urile worker"""
         print("\n[*] Oprire ThreadingManager...")
 
+        # Curățare finală
+        self._cleanup_processors()
+
         # Oprim worker-ii
         for worker in self.io_workers:
             worker.stop()
@@ -303,35 +274,57 @@ class ThreadingManager:
         for worker in self.response_workers:
             worker.stop()
 
-        # Așteptăm să termine task-urile curente
-        self.io_queue.join()
-        self.response_queue.join()
+        # Așteptăm să termine task-urile curente (cu timeout)
+        print("[*] Așteptăm finalizarea task-urilor I/O...")
+        try:
+            self.io_queue.join()
+        except:
+            pass
+
+        print("[*] Așteptăm finalizarea răspunsurilor...")
+        try:
+            self.response_queue.join()
+        except:
+            pass
 
         # Așteptăm să se termine thread-urile
         for worker in self.io_workers:
             worker.join(timeout=2.0)
+            if worker.is_alive():
+                print(f"[!] {worker.name} nu s-a oprit complet")
 
         for worker in self.response_workers:
             worker.join(timeout=2.0)
+            if worker.is_alive():
+                print(f"[!] {worker.name} nu s-a oprit complet")
 
         print("[+] ThreadingManager oprit")
 
 
 # Instanță globală
 _manager = None
+_manager_lock = threading.Lock()
 
 
 def get_manager():
-    """Returnează instanța globală a ThreadingManager"""
+    """Returnează instanța globală a ThreadingManager (thread-safe)"""
     global _manager
+
     if _manager is None:
-        _manager = ThreadingManager()
+        with _manager_lock:
+            # Double-check locking pattern
+            if _manager is None:
+                _manager = ThreadingManager()
+
     return _manager
 
 
 def shutdown_manager():
     """Oprește manager-ul global"""
     global _manager
+
     if _manager:
-        _manager.shutdown()
-        _manager = None
+        with _manager_lock:
+            if _manager:
+                _manager.shutdown()
+                _manager = None

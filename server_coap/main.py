@@ -3,8 +3,9 @@ import json
 import base64
 import threading
 import time
+import queue
 
-from Pachet import handle_request, parse_packet, exista_storage
+from Pachet import handle_request, parse_packet
 import threading_manager as tm
 
 SERVER_PORT = 5683
@@ -13,12 +14,25 @@ SERVER_PORT = 5683
 server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_sock.bind(("0.0.0.0", SERVER_PORT))
 
-exista_storage()
+#coada globala pentru pachetele primite
+incoming = queue.Queue()
+
 manager = tm.get_manager()
 
 print(f"[*] Server CoAP pornit pe port {SERVER_PORT}")
 print(f"[*] Așteaptă cereri... (Ctrl+C pentru oprire)\n")
 
+
+def process_incoming_packets():
+    while True:
+        try:
+            data, client_addr = incoming.get()
+            header, payload = parse_packet(data)
+            if header['type'] == 2 and header['code'] == 0 and not payload:  # ACK empty, ignor
+                continue
+            handle_request(header, payload, client_addr, server_sock, incoming)
+        except Exception as e:
+            print(f"[!] Eroare procesare pachet din coadă: {e}")
 
 def test_client():
     # Așteptăm sa se porneasca serverul
@@ -67,16 +81,21 @@ def test_client():
     finally:
         client_sock.close()
 
+# Pornim thread-ul de procesare
+threading.Thread(target=process_incoming_packets, daemon=True).start()
 
 # Pornim testul în thread separat
 threading.Thread(target=test_client, daemon=True).start()
 
-# Bucla principală server
 try:
     while True:
-        data, client_addr = server_sock.recvfrom(65535)
-        header, payload = parse_packet(data)
-        handle_request(header, payload, client_addr, server_sock)
+        try:
+            data, client_addr = server_sock.recvfrom(65535)
+            #pun pachetul in coada
+            incoming.put((data, client_addr))
+        except Exception as e:
+            print(f"[!] Eroare recvfrom in main thread: {e}")
+            continue
 
 except KeyboardInterrupt:
     print("\n[*] Oprire server...")

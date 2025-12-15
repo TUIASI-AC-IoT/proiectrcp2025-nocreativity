@@ -11,7 +11,8 @@ HEADER_SIZE = 4
 PAYLOAD_MARKER_SIZE = 1
 FRAGMENT_OVERHEAD = 200 #spatiu pentru metadata JSON
 
-MAX_PAYLOAD_SIZE = MAX_SIZE_PACHET - HEADER_SIZE - PAYLOAD_MARKER_SIZE - FRAGMENT_OVERHEAD
+RAW_MAX = 14000 - 4 - 1 - 200
+MAX_PAYLOAD_SIZE = RAW_MAX - (RAW_MAX % 4)
 
 PAYLOAD_MARKER = 0xFF
 
@@ -21,6 +22,7 @@ STORAGE = "storage" # directorul de baza pentru stocare
 COAP = {
     "CREATED": 65,         # 2.01
     "DELETED": 66,         # 2.02
+    "VALID":   67,         # 2.03
     "CHANGED": 68,         # 2.04
     "CONTENT": 69,         # 2.05
     "BAD_REQUEST": 128,    # 4.00  LIPSA PAYLOAD-ULUI ACOLO UNDE ESTE NECESAR
@@ -121,7 +123,6 @@ def upload_request(payload,msg_type,msg_id,client_addr, sock):
 
 def handle_normal_upload(file_path, content, msg_type, msg_id, client_addr, sock):
     try:
-        #decodare base64
         file_bytes = base64.b64decode(content)
 
         #creare director parinte
@@ -256,42 +257,19 @@ def download_request(payload, msg_type, msg_id, client_addr, sock, packet_queue=
         content_b64 = base64.b64encode(file_bytes).decode("utf-8")
         encoded_size = len(content_b64)
 
-        # Verificăm dacă fișierul este prea mare pentru un singur pachet
-        if encoded_size > MAX_PAYLOAD_SIZE and packet_queue is not None:
-            print(f"[+] Fișier mare ({file_size} bytes → {encoded_size} b64). Se activează fragmentarea.")
+        # Determin dacă trebuie fragmentare
+        if encoded_size > MAX_PAYLOAD_SIZE:
+            # Caz fragmentat - necesită packet_queue pentru a primi ACK-urile
+            if packet_queue is None:
+                raise Exception("packet_queue required for fragmented download")
 
-            # Trimitem mai întâi un răspuns de informare (opțional, dar util pentru client)
-            info_payload = json.dumps({
-                "name": os.path.basename(file_path),
-                "size": file_size,
-                "fragmented": True,
-                "total_fragments": frag.fragmente_necesare(content_b64)
-            }).encode("utf-8")
-            if msg_type == 0:
-                build_and_send_acknowledgement(sock, client_addr, msg_id, info_payload, COAP["CONTENT"])
-
-            # Apoi începem transmisia fragmentată
-            success = frag.handle_fragmented_download(
-                file_path, content_b64, sock, client_addr, msg_id, packet_queue
+            handle_fragmented_download(
+                file_path, content_b64, file_size, sock, client_addr, msg_id, msg_type, packet_queue
             )
-            if not success:
-                error_payload = json.dumps({
-                    "status": "error",
-                    "message": "Fragmented transfer failed"
-                }).encode("utf-8")
-                build_and_send_acknowledgement(sock, client_addr, msg_id, error_payload, COAP["SERVER_ERROR"])
         else:
-            # Fișier mic – trimitem normal
-            response_payload = json.dumps({
-                "name": os.path.basename(file_path),
-                "size": file_size,
-                "content": content_b64
-            }).encode("utf-8")
-
-            if msg_type == 0:
-                build_and_send_acknowledgement(sock, client_addr, msg_id, response_payload, COAP["CONTENT"])
-
-            print(f"[+] Fișier descărcat normal: {file_path} ({file_size} bytes)")
+            handle_normal_download(
+                file_path, file_size, content_b64, sock, client_addr, msg_id, msg_type
+            )
 
     except Exception as e:
         print(f"[!] Eroare la download: {e}")
@@ -301,6 +279,47 @@ def download_request(payload, msg_type, msg_id, client_addr, sock, packet_queue=
                 "message": str(e)
             }).encode("utf-8")
             build_and_send_acknowledgement(sock, client_addr, msg_id, error_payload, COAP["SERVER_ERROR"])
+
+
+def handle_normal_download(file_path, file_size, content_b64, sock, client_addr, msg_id, msg_type):
+    response_payload = json.dumps({
+        "name": os.path.basename(file_path),
+        "size": file_size,
+        "content": content_b64
+    }).encode("utf-8")
+
+    if msg_type == 0:
+        build_and_send_acknowledgement(sock, client_addr, msg_id, response_payload, COAP["CONTENT"])
+
+    print(f"[+] Fișier descărcat normal: {file_path} ({file_size} bytes)")
+
+
+def handle_fragmented_download(file_path, content_b64, file_size, sock, client_addr, msg_id_base, msg_type,packet_queue):
+    total_fragments = frag.fragmente_necesare(content_b64)
+
+    print(f"[+] Fișier mare ({file_size} bytes → {len(content_b64)} b64). Fragmentare în {total_fragments} părți.")
+
+    # Trimit mai întâi un răspuns informativ pentru client
+    if msg_type == 0:
+        info_payload = json.dumps({
+            "name": os.path.basename(file_path),
+            "size": file_size,
+            "fragmented": True,
+            "total_fragments": total_fragments
+        }).encode("utf-8")
+        build_and_send_acknowledgement(sock, client_addr, msg_id_base, info_payload, COAP["CONTENT"])
+
+
+    success = frag.handle_fragmented_download(
+        file_path, content_b64, sock, client_addr, msg_id_base, packet_queue
+    )
+
+    if not success and msg_type == 0:
+        error_payload = json.dumps({
+            "status": "error",
+            "message": "Fragmented transfer failed"
+        }).encode("utf-8")
+        build_and_send_acknowledgement(sock, client_addr, msg_id_base, error_payload, COAP["SERVER_ERROR"])
 
 
 """
