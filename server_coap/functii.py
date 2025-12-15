@@ -299,7 +299,6 @@ def handle_fragmented_download(file_path, content_b64, file_size, sock, client_a
 
     print(f"[+] Fișier mare ({file_size} bytes → {len(content_b64)} b64). Fragmentare în {total_fragments} părți.")
 
-    # Trimit mai întâi un răspuns informativ pentru client
     if msg_type == 0:
         info_payload = json.dumps({
             "name": os.path.basename(file_path),

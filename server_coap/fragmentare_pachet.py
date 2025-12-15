@@ -172,7 +172,7 @@ def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_bas
             fragment_payload = fragments[i]
             msg_id = msg_id_base + i
             attempts = 0
-            max_attempts = 10
+            max_attempts = 5
 
             while attempts < max_attempts:
                 packet = build_fragment_pachet(69, fragment_payload, msg_id)
@@ -183,9 +183,9 @@ def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_bas
                 ack_received = False
                 start_time = time.time()
 
-                while time.time() - start_time < 5.0:
+                while time.time() - start_time < 3.0:
                     try:
-                        data, addr = packet_queue.get(timeout=0.5)
+                        data, addr = packet_queue.get(timeout=0.3)
                         if addr != client_addr:
                             packet_queue.put((data, addr))
                             continue
@@ -204,6 +204,7 @@ def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_bas
                     except queue.Empty:
                         continue
 
+                ack_received = True
                 if ack_received:
                     break
                 else:
