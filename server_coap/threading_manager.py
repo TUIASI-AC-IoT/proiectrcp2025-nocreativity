@@ -164,7 +164,7 @@ class ThreadingManager:
     - Thread-uri individuale pentru fiecare cerere
     """
 
-    def __init__(self, num_io_workers=4, num_response_workers=2):
+    def __init__(self, num_io_workers=1, num_response_workers=1):
         self.io_queue = queue.Queue()
         self.response_queue = queue.Queue()
 
@@ -185,7 +185,7 @@ class ThreadingManager:
             self.response_workers.append(worker)
             print(f"[+] Pornit ResponseWorker-{i}")
 
-        # Tracking pentru thread-uri active - OPTIMIZAT
+        # Tracking pentru thread-uri active
         self.active_processors = []
         self.lock = threading.Lock()
         self.last_cleanup = time.time()
@@ -207,7 +207,7 @@ class ThreadingManager:
 
         processor.start()
 
-        # OPTIMIZAT: Curățare periodică, nu la fiecare cerere
+        # Curățare periodică, nu la fiecare cerere
         current_time = time.time()
         if current_time - self.last_cleanup > self.cleanup_interval:
             self._cleanup_processors()
@@ -312,7 +312,6 @@ def get_manager():
 
     if _manager is None:
         with _manager_lock:
-            # Double-check locking pattern
             if _manager is None:
                 _manager = ThreadingManager()
 

@@ -158,7 +158,7 @@ assembler = AsamblareFragment()
 
 
 
-def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, msg_id_base, packet_queue):
+def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_base, packet_queue):
     fragments = split_payload(file_content_b64, file_path)
     total_fragments = len(fragments)
 

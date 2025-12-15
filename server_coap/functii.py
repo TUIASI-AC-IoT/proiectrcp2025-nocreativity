@@ -310,7 +310,7 @@ def handle_fragmented_download(file_path, content_b64, file_size, sock, client_a
         build_and_send_acknowledgement(sock, client_addr, msg_id_base, info_payload, COAP["CONTENT"])
 
 
-    success = frag.handle_fragmented_download(
+    success = frag.handle_fragmented(
         file_path, content_b64, sock, client_addr, msg_id_base, packet_queue
     )
 
