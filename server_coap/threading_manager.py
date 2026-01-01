@@ -93,7 +93,8 @@ class ResponseWorker(threading.Thread):
                     packet = response_data['packet']
 
                     sock.sendto(packet, client_addr)
-                    print(f"[<] Răspuns trimis către {client_addr}")
+
+                    print(f"[<] DE LA WORKER Răspuns trimis către {client_addr}")
 
                 except Exception as e:
                     print(f"[!] Eroare trimitere răspuns: {e}")

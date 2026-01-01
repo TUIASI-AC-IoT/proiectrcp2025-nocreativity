@@ -198,8 +198,8 @@ Server:
 <br>
 
 -Mutare fișier (MOVE /src /dst)   
-&nbsp;&nbsp;&nbsp;&nbsp;Client → Confirmable cod 0.08 (MOVE)  
-&nbsp;&nbsp;&nbsp;&nbsp;Server → ACK 2.01 Created dacă mutarea a reușit  
+&nbsp;&nbsp;&nbsp;&nbsp;Client → Confirmable cod 0.05 (MOVE)  
+&nbsp;&nbsp;&nbsp;&nbsp;Server → ACK 2.04 Created dacă mutarea a reușit  
 
 client:  
 ```
@@ -230,15 +230,15 @@ server:
 client:  
 ```
 {
-  "name": "directory",
-  "type": "directory",
-  "items": ["file.txt", "file.pdf", "directory2/"]
+  "path": "/directory/"
 }
 ```
 Server:  
 ```
 {
-  "path": "/directory/"
+  "name": "directory",
+  "type": "directory",
+  "items": ["file.txt", "file.pdf", "directory2/"]
 }
 {
   "status": "error",

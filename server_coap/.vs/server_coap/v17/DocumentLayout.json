@@ -1,0 +1,105 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\fragmentare_pachet.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:fragmentare_pachet.py||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\main.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:main.py||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\threading_manager.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:threading_manager.py||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\Pachet.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Pachet.py||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\functii.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:functii.py||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "threading_manager.py",
+              "DocumentMoniker": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\threading_manager.py",
+              "RelativeDocumentMoniker": "threading_manager.py",
+              "ToolTip": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\threading_manager.py",
+              "RelativeToolTip": "threading_manager.py",
+              "ViewState": "AgIAAHsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMtSURBVDhPrZS9T1tnFMZ/1/cLGxy7BNuJIeCG2hIiSSWqRmmR8Fh16lhVVVTRIR34Ezo2kSqUqUJeKkHLEqlDWZAyUJZEoUNaoTatXEgsQykGFFyw8de997337RA5MeYqUx/pDOc55zx6znmlF/5PSCmVzjybzX4/NTV1U9f1TvoUKpWKrFard5aXl\u002B/u7e1Vu\u002BtaNzE9PU0ikeimX2J1dVUWi8UvVFWVKysr3xQKhXJn/YwgQKFQ6KZQVZVUKoWu64FsNhtNp9O3LMsKapo2u7Gxcdju8xVMJpPdFIry6jqGYeiTk5MDuq5/IqW0hBBfFwqFOkCgc6gNwzDORPuuqqqytLTE3Nycura2diEUCk2Yphlvz/o63Nzc7KbQNI10Os27N95n4vp7aAGFZv3Emp\u002Bf//tUX2fSxtjYWDdFzRL8lD9kv9qk2bTRA3AxrGoXh4b7A4FXi/oK\u002Bjm0\u002BpI8269xUKnz\u002BOk\u002BwrGJ9Rn6R\u002BNDI/F4vK/d53vDVCp1JioNwaONPfI7ZTzh4AmXaq2hNEQgGA6HQ\u002B1ZX0EA13VxUfjrucO9xwf8tl3m2qUoE6l\u002BzvfqCOEghCAWrV9d\u002Bu7mz17zjyee5w37rry1tQXAbkvnxycn7JZPEMLGdRyE4\u002BA6Np7r4CkKhvIcmuvQWh8n9uWsr8NMJkMmk6Ehezg4riGEg\u002BcINDwiQY1ISCca0nk7FeJasgpuE6x/wN75wNdhPp8HYGe3iWXZeEIw3K8xk20SVI\u002BR0gPpETWOGAwegGi8EHWPI691ODKYwAiAEA63sgbvXPiV8dgzrsQLXBnIM9RbRBH/gqiBWwc9eeQraNs2tm0z8obJ5YEgYVMlds5DkS54NggLPA9cQAZA6tBz1cUY/NZ35VKpBIAJfJ69TMWCRGQLWja4LVAioARBV8DMHGG\u002B\u002BSc9bz1dXFyc9RUcHR09lSuKgumVJLW6gtsC9xB6b4BUQD2/88P93a8ePLj3KJfLNc4ILiwsvPwIOvHZpx9uXzIHU9i/v3iAk1\u002BQfdelG5woP3x4u5jL5RrdM6\u002BFlPKc9Jy7srW9J2vrnrRK21LK\u002B1LKj2dmZlLtvv8AoKdgTW7XN1wAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-15T12:38:32.17Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Pachet.py",
+              "DocumentMoniker": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\Pachet.py",
+              "RelativeDocumentMoniker": "Pachet.py",
+              "ToolTip": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\Pachet.py",
+              "RelativeToolTip": "Pachet.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMtSURBVDhPrZS9T1tnFMZ/1/cLGxy7BNuJIeCG2hIiSSWqRmmR8Fh16lhVVVTRIR34Ezo2kSqUqUJeKkHLEqlDWZAyUJZEoUNaoTatXEgsQykGFFyw8de997337RA5MeYqUx/pDOc55zx6znmlF/5PSCmVzjybzX4/NTV1U9f1TvoUKpWKrFard5aXl\u002B/u7e1Vu\u002BtaNzE9PU0ikeimX2J1dVUWi8UvVFWVKysr3xQKhXJn/YwgQKFQ6KZQVZVUKoWu64FsNhtNp9O3LMsKapo2u7Gxcdju8xVMJpPdFIry6jqGYeiTk5MDuq5/IqW0hBBfFwqFOkCgc6gNwzDORPuuqqqytLTE3Nycura2diEUCk2Yphlvz/o63Nzc7KbQNI10Os27N95n4vp7aAGFZv3Emp\u002Bf//tUX2fSxtjYWDdFzRL8lD9kv9qk2bTRA3AxrGoXh4b7A4FXi/oK\u002Bjm0\u002BpI8269xUKnz\u002BOk\u002BwrGJ9Rn6R\u002BNDI/F4vK/d53vDVCp1JioNwaONPfI7ZTzh4AmXaq2hNEQgGA6HQ\u002B1ZX0EA13VxUfjrucO9xwf8tl3m2qUoE6l\u002BzvfqCOEghCAWrV9d\u002Bu7mz17zjyee5w37rry1tQXAbkvnxycn7JZPEMLGdRyE4\u002BA6Np7r4CkKhvIcmuvQWh8n9uWsr8NMJkMmk6Ehezg4riGEg\u002BcINDwiQY1ISCca0nk7FeJasgpuE6x/wN75wNdhPp8HYGe3iWXZeEIw3K8xk20SVI\u002BR0gPpETWOGAwegGi8EHWPI691ODKYwAiAEA63sgbvXPiV8dgzrsQLXBnIM9RbRBH/gqiBWwc9eeQraNs2tm0z8obJ5YEgYVMlds5DkS54NggLPA9cQAZA6tBz1cUY/NZ35VKpBIAJfJ69TMWCRGQLWja4LVAioARBV8DMHGG\u002B\u002BSc9bz1dXFyc9RUcHR09lSuKgumVJLW6gtsC9xB6b4BUQD2/88P93a8ePLj3KJfLNc4ILiwsvPwIOvHZpx9uXzIHU9i/v3iAk1\u002BQfdelG5woP3x4u5jL5RrdM6\u002BFlPKc9Jy7srW9J2vrnrRK21LK\u002B1LKj2dmZlLtvv8AoKdgTW7XN1wAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-15T12:38:30.823Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "main.py",
+              "DocumentMoniker": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\main.py",
+              "RelativeDocumentMoniker": "main.py",
+              "ToolTip": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\main.py",
+              "RelativeToolTip": "main.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMtSURBVDhPrZS9T1tnFMZ/1/cLGxy7BNuJIeCG2hIiSSWqRmmR8Fh16lhVVVTRIR34Ezo2kSqUqUJeKkHLEqlDWZAyUJZEoUNaoTatXEgsQykGFFyw8de997337RA5MeYqUx/pDOc55zx6znmlF/5PSCmVzjybzX4/NTV1U9f1TvoUKpWKrFard5aXl\u002B/u7e1Vu\u002BtaNzE9PU0ikeimX2J1dVUWi8UvVFWVKysr3xQKhXJn/YwgQKFQ6KZQVZVUKoWu64FsNhtNp9O3LMsKapo2u7Gxcdju8xVMJpPdFIry6jqGYeiTk5MDuq5/IqW0hBBfFwqFOkCgc6gNwzDORPuuqqqytLTE3Nycura2diEUCk2Yphlvz/o63Nzc7KbQNI10Os27N95n4vp7aAGFZv3Emp\u002Bf//tUX2fSxtjYWDdFzRL8lD9kv9qk2bTRA3AxrGoXh4b7A4FXi/oK\u002Bjm0\u002BpI8269xUKnz\u002BOk\u002BwrGJ9Rn6R\u002BNDI/F4vK/d53vDVCp1JioNwaONPfI7ZTzh4AmXaq2hNEQgGA6HQ\u002B1ZX0EA13VxUfjrucO9xwf8tl3m2qUoE6l\u002BzvfqCOEghCAWrV9d\u002Bu7mz17zjyee5w37rry1tQXAbkvnxycn7JZPEMLGdRyE4\u002BA6Np7r4CkKhvIcmuvQWh8n9uWsr8NMJkMmk6Ehezg4riGEg\u002BcINDwiQY1ISCca0nk7FeJasgpuE6x/wN75wNdhPp8HYGe3iWXZeEIw3K8xk20SVI\u002BR0gPpETWOGAwegGi8EHWPI691ODKYwAiAEA63sgbvXPiV8dgzrsQLXBnIM9RbRBH/gqiBWwc9eeQraNs2tm0z8obJ5YEgYVMlds5DkS54NggLPA9cQAZA6tBz1cUY/NZ35VKpBIAJfJ69TMWCRGQLWja4LVAioARBV8DMHGG\u002B\u002BSc9bz1dXFyc9RUcHR09lSuKgumVJLW6gtsC9xB6b4BUQD2/88P93a8ePLj3KJfLNc4ILiwsvPwIOvHZpx9uXzIHU9i/v3iAk1\u002BQfdelG5woP3x4u5jL5RrdM6\u002BFlPKc9Jy7srW9J2vrnrRK21LK\u002B1LKj2dmZlLtvv8AoKdgTW7XN1wAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-15T12:38:27.104Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "fragmentare_pachet.py",
+              "DocumentMoniker": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\fragmentare_pachet.py",
+              "RelativeDocumentMoniker": "fragmentare_pachet.py",
+              "ToolTip": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\fragmentare_pachet.py",
+              "RelativeToolTip": "fragmentare_pachet.py",
+              "ViewState": "AgIAAHUAAAAAAAAAAAAAAKMAAAA1AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMtSURBVDhPrZS9T1tnFMZ/1/cLGxy7BNuJIeCG2hIiSSWqRmmR8Fh16lhVVVTRIR34Ezo2kSqUqUJeKkHLEqlDWZAyUJZEoUNaoTatXEgsQykGFFyw8de997337RA5MeYqUx/pDOc55zx6znmlF/5PSCmVzjybzX4/NTV1U9f1TvoUKpWKrFard5aXl\u002B/u7e1Vu\u002BtaNzE9PU0ikeimX2J1dVUWi8UvVFWVKysr3xQKhXJn/YwgQKFQ6KZQVZVUKoWu64FsNhtNp9O3LMsKapo2u7Gxcdju8xVMJpPdFIry6jqGYeiTk5MDuq5/IqW0hBBfFwqFOkCgc6gNwzDORPuuqqqytLTE3Nycura2diEUCk2Yphlvz/o63Nzc7KbQNI10Os27N95n4vp7aAGFZv3Emp\u002Bf//tUX2fSxtjYWDdFzRL8lD9kv9qk2bTRA3AxrGoXh4b7A4FXi/oK\u002Bjm0\u002BpI8269xUKnz\u002BOk\u002BwrGJ9Rn6R\u002BNDI/F4vK/d53vDVCp1JioNwaONPfI7ZTzh4AmXaq2hNEQgGA6HQ\u002B1ZX0EA13VxUfjrucO9xwf8tl3m2qUoE6l\u002BzvfqCOEghCAWrV9d\u002Bu7mz17zjyee5w37rry1tQXAbkvnxycn7JZPEMLGdRyE4\u002BA6Np7r4CkKhvIcmuvQWh8n9uWsr8NMJkMmk6Ehezg4riGEg\u002BcINDwiQY1ISCca0nk7FeJasgpuE6x/wN75wNdhPp8HYGe3iWXZeEIw3K8xk20SVI\u002BR0gPpETWOGAwegGi8EHWPI691ODKYwAiAEA63sgbvXPiV8dgzrsQLXBnIM9RbRBH/gqiBWwc9eeQraNs2tm0z8obJ5YEgYVMlds5DkS54NggLPA9cQAZA6tBz1cUY/NZ35VKpBIAJfJ69TMWCRGQLWja4LVAioARBV8DMHGG\u002B\u002BSc9bz1dXFyc9RUcHR09lSuKgumVJLW6gtsC9xB6b4BUQD2/88P93a8ePLj3KJfLNc4ILiwsvPwIOvHZpx9uXzIHU9i/v3iAk1\u002BQfdelG5woP3x4u5jL5RrdM6\u002BFlPKc9Jy7srW9J2vrnrRK21LK\u002B1LKj2dmZlLtvv8AoKdgTW7XN1wAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-15T12:38:25.092Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "functii.py",
+              "DocumentMoniker": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\functii.py",
+              "RelativeDocumentMoniker": "functii.py",
+              "ToolTip": "C:\\Users\\new_l\\OneDrive\\Desktop\\rc_p\\server_coap\\functii.py",
+              "RelativeToolTip": "functii.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMtSURBVDhPrZS9T1tnFMZ/1/cLGxy7BNuJIeCG2hIiSSWqRmmR8Fh16lhVVVTRIR34Ezo2kSqUqUJeKkHLEqlDWZAyUJZEoUNaoTatXEgsQykGFFyw8de997337RA5MeYqUx/pDOc55zx6znmlF/5PSCmVzjybzX4/NTV1U9f1TvoUKpWKrFard5aXl\u002B/u7e1Vu\u002BtaNzE9PU0ikeimX2J1dVUWi8UvVFWVKysr3xQKhXJn/YwgQKFQ6KZQVZVUKoWu64FsNhtNp9O3LMsKapo2u7Gxcdju8xVMJpPdFIry6jqGYeiTk5MDuq5/IqW0hBBfFwqFOkCgc6gNwzDORPuuqqqytLTE3Nycura2diEUCk2Yphlvz/o63Nzc7KbQNI10Os27N95n4vp7aAGFZv3Emp\u002Bf//tUX2fSxtjYWDdFzRL8lD9kv9qk2bTRA3AxrGoXh4b7A4FXi/oK\u002Bjm0\u002BpI8269xUKnz\u002BOk\u002BwrGJ9Rn6R\u002BNDI/F4vK/d53vDVCp1JioNwaONPfI7ZTzh4AmXaq2hNEQgGA6HQ\u002B1ZX0EA13VxUfjrucO9xwf8tl3m2qUoE6l\u002BzvfqCOEghCAWrV9d\u002Bu7mz17zjyee5w37rry1tQXAbkvnxycn7JZPEMLGdRyE4\u002BA6Np7r4CkKhvIcmuvQWh8n9uWsr8NMJkMmk6Ehezg4riGEg\u002BcINDwiQY1ISCca0nk7FeJasgpuE6x/wN75wNdhPp8HYGe3iWXZeEIw3K8xk20SVI\u002BR0gPpETWOGAwegGi8EHWPI691ODKYwAiAEA63sgbvXPiV8dgzrsQLXBnIM9RbRBH/gqiBWwc9eeQraNs2tm0z8obJ5YEgYVMlds5DkS54NggLPA9cQAZA6tBz1cUY/NZ35VKpBIAJfJ69TMWCRGQLWja4LVAioARBV8DMHGG\u002B\u002BSc9bz1dXFyc9RUcHR09lSuKgumVJLW6gtsC9xB6b4BUQD2/88P93a8ePLj3KJfLNc4ILiwsvPwIOvHZpx9uXzIHU9i/v3iAk1\u002BQfdelG5woP3x4u5jL5RrdM6\u002BFlPKc9Jy7srW9J2vrnrRK21LK\u002B1LKj2dmZlLtvv8AoKdgTW7XN1wAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-15T12:38:21.766Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
