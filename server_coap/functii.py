@@ -300,7 +300,7 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
                 build_and_submit_response(sock, client_addr, msg_id, ack_payload, COAP["CONTENT"])
             elif msg_type == 1:
 
-                build_and_submit_response(sock,client_addr,msg_id, ack_payload, COAP["CONTENT"], 0)
+                build_and_submit_response(sock,client_addr,msg_id, ack_payload, COAP["CONTENT"], 1)
             print(f"[+] Fișier descărcat: {file_path} ({file_size} bytes)")
 
     except Exception as e:
@@ -385,7 +385,7 @@ def listare_director(payload,msg_type,msg_id,client_addr, sock):
         if msg_type == 0:
             build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["CONTENT"])
         elif msg_type == 1:
-                build_and_submit_response(sock,client_addr,msg_id, ack_payload, COAP["CONTENT"], 0)
+                build_and_submit_response(sock,client_addr,msg_id, ack_payload, COAP["CONTENT"], 1)
         print(f"Director listat: {dir_path}")
 
     except Exception as e:
