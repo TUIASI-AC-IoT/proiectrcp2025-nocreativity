@@ -14,6 +14,7 @@ STORAGE = "storage" # directorul de baza pentru stocare
 COAP = {
     "CREATED": 65,         # 2.01
     "DELETED": 66,         # 2.02
+    "CHANGED": 68,         # 2.04
     "CONTENT": 69,         # 2.05
     "BAD_REQUEST": 128,    # 4.00  LIPSA PAYLOAD-ULUI ACOLO UNDE ESTE NECESAR
     "NOT_FOUND": 132,      # 4.04  PATH-UL FURNIZAT DE UTILIZATOR NU CORESPUNDE CERINTEI APLICATIEI 
@@ -299,7 +300,6 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
             if msg_type == 0:
                 build_and_submit_response(sock, client_addr, msg_id, ack_payload, COAP["CONTENT"])
             elif msg_type == 1:
-
                 build_and_submit_response(sock,client_addr,msg_id, ack_payload, COAP["CONTENT"], 1)
             print(f"[+] Fișier descărcat: {file_path} ({file_size} bytes)")
 
@@ -525,10 +525,14 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
         }).encode("utf-8")
 
         if msg_type == 0:
-            build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["MOVED"])
+            build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["CHANGED"])
 
         print(f"Fisier mutat: {source} -> {destination}")
-
+    except Exception as e:
+        import traceback
+        print(f"Error move: {e}")
+        traceback.print_exc()
+'''
     except Exception as e:
         print(f"Error move: {e}")
         if msg_type == 0:
@@ -537,3 +541,5 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "message": str(e)
             }).encode("utf-8")
             build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
+'''
+  
