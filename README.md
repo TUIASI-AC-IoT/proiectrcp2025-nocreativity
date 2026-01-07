@@ -41,6 +41,25 @@ Structura pachetelor este următoarea:
 
 <br>
 
+```
+ # Despachetăm primii 4 bytes: (Version/Type/TKL, Code, Message ID)
+    first_byte, code, msg_id = struct.unpack("!BBH", data[:4])
+    version = (first_byte >> 6) & 0x03
+    msg_type = (first_byte >> 4) & 0x03
+    tkl = first_byte & 0x0F
+
+
+    header = {
+        "version": version,
+        "type": msg_type,
+        "tkl": tkl,
+        "code": code,
+        "message_id": msg_id
+    }
+```
+
+<br>
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Token; asigură corelarea cererilor cu răspunsurile. Clientul generează o cerere către server, incluzând un token unic care se va regăsi în răspunsul trimis. Utilizarea acestuia este opțională.  
 
 <br>
@@ -51,9 +70,38 @@ Structura pachetelor este următoarea:
 <br>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Payload; reprezintă datele transmise între client și server. Poate conține, de exemplu, conținutul unui fișier, structura unui director sau un mesaj de confirmare.   
+<br>
+```
+    if payload_part:
+        try:
+            payload = json.loads(payload_part.decode('utf-8')) 
+ # Decodificăm payload-ul JSON
+        except json.JSONDecodeError:
+            print("[!] Eroare parsare JSON payload")
+```
+<br>
 Dimensiunea maximă recomandată pentru un pachet CoAP este de aproximativ 1152 octeți.Din acest total, payloadul poate ocupa de regulă până la 1024 octeți.  
 În cadrul acestui proiect ne vom limita la dimensiunea maximă unui pachet UDP, deci 64 de kilobytes.  
 Dacă mesajul depășește această limită, conținutul trebuie împărțit în mai multe pachete. Fragmentarea se realizează la nivelul aplicației, iar fiecare pachet trebuie identificat astfel încât receptorul să poată reconstrui corect mesajul complet.  
+<br>
+
+```
+        for i in range (total_fragments):
+            start = i*MAX_PAYLOAD_SIZE
+            end = min(start+MAX_PAYLOAD_SIZE, len(content_b64))
+            fragment_payload = {
+                "path": path,
+                "content": content_b64[start:end],
+                "fragment": {
+                    "index": i,
+                    "total": total_fragments,
+                    "size": len(content_b64[start:end])
+                }
+            }
+            fragments.append(fragment_payload)
+```
+<br>
+Fragmentarea se va utiliza la operațiile de download și upload. La nivelul serverului, pentru operația de download, se sparge payload-ul într-un număr de fragmente necesare(funcția split_payload), după care se trimit, pe rând, pachetele create în urma cărora se așteaptă câte un ACK. Pentru funcția de upload, serverul primește un număr de pachete pe care le asamblează în ordinea corespunzătoare cu ajutorul obiectului assembler, din clasa AsamblarePachet.
 În cadrul proiectului, payloadul este sub format de json, serverul/clientul va accepta doar tipuri specifice de jsonuri, specificate în secțiunea (3).
 
 <br>
@@ -77,7 +125,28 @@ Protocolul CoAP folosește un set de metode similare cu cele din HTTP, care defi
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-PUT(cod 0.03): înlocuiește complet conținutul unei resurse existente (opțional, în funcție de implementare). În cazul unei astfel de cereri,răspunsul trebuie să conțină codul 2.04 (Changed) pentru a confirma că fișierul existent a fost suprascris cu succes.   
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-DELETE(cod 0.04):  șterge o resursă de pe server.În cazul unei cereri DELETE, răspunsul trebuie să conțină codul 2.02 (Deleted) pentru a confirma că fișierul sau directorul a fost șters cu succes de pe server.   
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-În contextul proiectului, va fi definită și o metodă suplimentară mai precis metoda MOVE(cod 0.05), care va fi utilizată pentru mutarea unui fișier anume într-un alt director *existent*, iar răspunsul corespunzător unei astfel de cereri ar avea codul 2.04 (Changed).    
-
+<br>
+```
+    if code == 1:  # GET
+        path = payload.get("path", "")
+        if path.endswith("/"):
+            print("[*] → Listare director (va folosi Thread I/O)")
+            listare_director(payload, msg_type, msg_id, client_addr, sock)
+        else:
+            print("[*] → Download fișier (va folosi Thread I/O)")
+            download_request(payload, msg_type, msg_id, client_addr, sock)
+    elif code == 2:  # POST
+        print("[*] → Upload fișier (va folosi Thread I/O)")
+        upload_request(payload, msg_type, msg_id, client_addr, sock)
+    elif code == 4:  # DELETE
+        print("[*] → Ștergere (va folosi Thread I/O)")
+        delete_request(payload, msg_type, msg_id, client_addr, sock)
+    elif code == 5:  # MOVE
+        print("[*] → Mutare fișier (va folosi Thread I/O)")
+        move_request(payload, msg_type, msg_id, client_addr, sock)
+    else:
+        print(f"[!] Cod necunoscut: {code}")
+```
 <br>
 
 Tipuri de răspunsuri: [4] [7]   
@@ -90,6 +159,20 @@ Răspunsurile CoAP sunt mesaje trimise de server către client pentru a indica r
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-2.01 (Created) confirmă că o resursă a fost creată cu succes pe server.  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-2.04 (Changed) confirmă că resursa existentă a fost modificată.  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-2.02 (Deleted) confirmă ștergerea unei resurse de pe server.  
+<br>
+```
+#coduri de raspuns si eroare
+COAP = {
+    "CREATED": 65,         # 2.01
+    "DELETED": 66,         # 2.02
+    "CHANGED": 68,         # 2.04
+    "CONTENT": 69,         # 2.05
+    "BAD_REQUEST": 128,    # 4.00  LIPSA PAYLOAD-ULUI ACOLO UNDE ESTE NECESAR
+    "NOT_FOUND": 132,      # 4.04  PATH-UL FURNIZAT DE UTILIZATOR NU CORESPUNDE CERINTEI APLICATIEI
+    "UNPROCESSABLE": 150,  # 4.22  LIPSA UNUI CAMP NECESAR DIN PAYLOAD
+    "SERVER_ERROR": 160    # 5.00
+}
+```
 
 <br>
 
@@ -99,6 +182,8 @@ Mecanismul Piggybacked Response: [5]
 În cazul mesajelor Confirmable, serverul poate trimite răspunsul în două moduri:   
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Piggybacked Response presupune trimiterea directă a răspunsului  în același pachet cu mesajul de confirmare (ACK).  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Separate Response determină faptul că serverul trimite mai întâi un mesaj ACK pentru confirmarea cererii și apoi, într-un pachet separat se trimite răspunsul efectiv.  
+<br>
+În cadrul acestui proiect este utilizat mecanismul Piggybacked Response, deoarece acesta permite transmiterea confirmării și a răspunsului efectiv într-un singur pachet de tip ACK.
 
 <br>
 
@@ -144,9 +229,28 @@ Server:
   "message": "Unable to execute"
 }
 ```
-
+<br>
+Funcția upload_request
+<br>
+Această funcție gestionează procesul de încărcare a fișierelor pe server, urmând etapele:
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Validare: Se verifică integritatea formatului payload-ului și validitatea căii de destinație (ex: restricționarea încărcării doar în directorul storage/).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Gestiunea segmentării: Verifică dacă payload-ul este transmis fragmentat (în mai multe pachete). În caz afirmativ, funcția asigură reconstrucția completă a datelor înainte de procesare.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Procesarea datelor: Conținutul este decodat din format Base64 în flux de biți (bytes).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Scrierea datelor: Se asigură existența structurii de directoare prin os.makedirs. Fișierul este apoi scris pe disc, utilizând flush() și fsync() pentru a garanta sincronizarea imediată a datelor cu sistemul de fișiere, prevenind pierderile de date în cazul unei opriri neașteptate a serverului.
 <br>
 
+```
+        file_bytes = base64.b64decode(content)
+        #creare director parinte
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "wb") as file:
+            file.write(file_bytes)
+            """urmatoarele 2 linii de cod sunt necesare pentru adaugarea fisierului cand serverul e pornit"""
+            file.flush()
+            os.fsync(file.fileno())
+```
+<br><br>
 -Download fișier (GET /download)   
 &nbsp;&nbsp;&nbsp;&nbsp;Client trimite GET cu calea fișierului   
 &nbsp;&nbsp;&nbsp;&nbsp;Server trimite ACK 2.05 Content + payload cu fișierul  
@@ -170,7 +274,28 @@ server:
   "message": "Unable to execute"
 }
 ```
+<br>
+Funcția download_request
+<br>
+Această funcție gestionează procesul de transmitere a unui fișier de la server către client Fluxul principal include:
+ <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Validarea Cererii: Se verifică prezența payload-ului și a căii către fișier (path). <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Verificarea Fișierului: Se confirmă existența fizică a fișierului pe disc și faptul că acesta nu este un director. În caz de eroare, se returnează codurile CoAP corespunzătoare (NOT_FOUND, BAD_REQUEST). <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Procesarea Datelor: Fișierul este citit integral în mod binar și convertit în format Base64 pentru a fi inclus în structura JSON a răspunsului. <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Gestiunea Fragmentării:  Dacă dimensiunea datelor depășește limita pachetului standard, funcția calculează numărul de fragmente necesare. <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Transmiterea Simplă: Pentru fișiere mici, datele sunt trimise într-un singur pachet direct către client, utilizând codul de succes CONTENT. 
+<br>
 
+```
+            ack_payload = json.dumps({
+                "name": file_name,
+                "size": file_size,
+                "content": content_b64
+            }).encode("utf-8")
+            if msg_type == 0:
+                build_and_submit_response(sock, client_addr, msg_id, ack_payload, COAP["CONTENT"])
+```
+<br>
 <br>
 
 -Ștergere fișier (DELETE /path)  
@@ -194,8 +319,26 @@ Server:
   "message": "Unable to execute"
 }
 ```
+<br>
+Funcția delete_request
+<br>
+Gestionarea ștergerii resurselor de pe server se realizează în 4 pași simpli:
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Validare: Se verifică dacă cererea conține un payload valid și dacă parametrul path (calea către resursă) este prezent și dacă rădăcina directorului este ”storage/”.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Execuție Ștergere:Dacă path-ul indică un fișier, acesta este eliminat folosind os.remove, iar dacă path-ul indică un director, acesta este șters complet (inclusiv conținutul său) folosind shutil.rmtree.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Confirmare: Serverul trimite un pachet de confirmare, dacă requestul primit este de tipul CON, cu codul DELETED (CoAP) și un mesaj JSON care confirmă succesul operațiunii.<br>
 
 <br>
+
+```
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"Fisier sters: {file_path}")
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+            print(f"Director sters: {file_path}")
+```
+<br><br>
 
 -Mutare fișier (MOVE /src /dst)   
 &nbsp;&nbsp;&nbsp;&nbsp;Client → Confirmable cod 0.05 (MOVE)  
@@ -220,7 +363,29 @@ server:
   "message": "Unable to execute"
 }
 ```
+<br>
+Funcția move_request
+<br>
+Această funcție permite redenumirea sau mutarea fișierelor și directoarelor pe server, respectând următorii pași:
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Validarea Parametrilor: Se verifică prezența câmpurilor source (sursă) și destination (destinație) în payload-ul cererii și se verifică rădăcina path-ului care trebuie să fie ”storage/”.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Pregătirea Destinației: Se creează automat structura de directoare pentru calea de destinație (folosind os.makedirs), în cazul în care aceasta nu există.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Execuție: Se mută resursa folosind shutil.movei.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Confirmare CoAP: În caz de succes, serverul răspunde cu codul CHANGED, dacă clientul așteaptă un ACK.<br>
 
+```
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        shutil.move(source, destination)
+        ack_payload = json.dumps({
+            "status": "moved",
+            "from": source,
+            "to": destination
+        }).encode("utf-8")
+        if msg_type == 0:
+            build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["CHANGED"])
+```
+
+<br>
 <br>
 
 -Listare directoare (GET /list)  
@@ -245,7 +410,26 @@ Server:
   "message": "Unable to execute"
 }
 ```
+<br>
+Funcția listare_director
+<br>
+Această funcție completează mecanismul de descărcare, diferența logică este simplă: dacă calea solicitată este un fișier, se execută download_request, iar dacă este un director, se execută listare_director.
+Pașii principali de execuție:
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Identificarea Căii: Se preia path-ul din payload. Dacă acesta indică rădăcina (storage/), se setează directorul principal de lucru.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Identificarea Conținutului: Se parcurge conținutul folderului folosind os.listdir. Pentru a ajuta clientul să distingă vizual elementele, funcția adaugă un sufix / fișierelor găsite în listă.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Generarea Răspunsului: Se construiește un obiect JSON care conține numele directorului curent și lista tuturor elementelor (items).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-Trimiterea Pachetelor: Informația este trimisă cu codul CoAP CONTENT. Funcția gestionează atât mesajele de tip Confirmable (msg_type 0), cât și Non-Confirmable (msg_type 1).<br>
 
+```
+        items = []
+        for item in os.listdir(dir_path):
+            item_path = os.path.join(dir_path, item)
+            if os.path.isfile(item_path):
+                items.append(item + "/")
+            else:
+                items.append(item)
+```
 <br><br>
 
 __4. Threading și paralelizare__
