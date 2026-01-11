@@ -1,75 +1,60 @@
 import json
 import struct
 import math
-import queue
 import time
+import threading
 
 MAX_SIZE_PACHET = 14000
 HEADER_SIZE = 4
 PAYLOAD_MARKER_SIZE = 1
-FRAGMENT_OVERHEAD = 200 #spatiu pentru metadata JSON
+FRAGMENT_OVERHEAD = 200
 
 RAW_MAX = 14000 - 4 - 1 - 200
 MAX_PAYLOAD_SIZE = RAW_MAX - (RAW_MAX % 4)
-
 PAYLOAD_MARKER = 0xFF
+
+# Limite protecție
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+FRAGMENT_TIMEOUT = 300  # 5 minute
 
 
 def fragmente_necesare(content_b64):
-    content_size = len(content_b64)
-    if content_size <= MAX_PAYLOAD_SIZE:
+    if not content_b64:
+        return 0
+    if len(content_b64) <= MAX_PAYLOAD_SIZE:
         return 1
-
-    return math.ceil(content_size / MAX_PAYLOAD_SIZE)
+    return math.ceil(len(content_b64) / MAX_PAYLOAD_SIZE)
 
 
 def split_payload(content_b64, path):
-    """
-    Împarte conținutul base64 pe fragmente.
-    """
+    """Împarte base64 pe fragmente"""
+    if not isinstance(content_b64, str):
+        raise ValueError("content_b64 trebuie string")
+
+    if len(content_b64) > MAX_FILE_SIZE * 4 / 3:
+        raise ValueError(f"Fișier prea mare: max {MAX_FILE_SIZE} bytes")
 
     chunk_size = MAX_PAYLOAD_SIZE
 
-    print(f"[DEBUG split_payload] Lungime base64: {len(content_b64)} caractere")
-    print(f"[DEBUG] Chunk size: {chunk_size}")
-
-    # Dacă încap într-un singur fragment
     if len(content_b64) <= chunk_size:
         return [{
             "path": path,
             "content": content_b64,
-            "fragment": {
-                "index": 0,
-                "total": 1,
-                "size": len(content_b64)
-            }
+            "fragment": {"index": 0, "total": 1, "size": len(content_b64)}
         }]
 
-    # Calculează numărul de fragmente
-    total_fragments = math.ceil(len(content_b64) / chunk_size)
-
+    total = math.ceil(len(content_b64) / chunk_size)
     fragments = []
 
-    for i in range(total_fragments):
+    for i in range(total):
         start = i * chunk_size
         end = min(start + chunk_size, len(content_b64))
 
-        fragment_content = content_b64[start:end]
-
         fragments.append({
             "path": path,
-            "content": fragment_content,
-            "fragment": {
-                "index": i,
-                "total": total_fragments,
-                "size": len(fragment_content)
-            }
+            "content": content_b64[start:end],
+            "fragment": {"index": i, "total": total, "size": len(content_b64[start:end])}
         })
-
-        print(f"[DEBUG] Fragment {i}: {len(fragment_content)} caractere (start={start}, end={end})")
-
-    total_length = sum(len(f["content"]) for f in fragments)
-    print(f"[DEBUG] Total fragmente: {total_fragments}, total caractere: {total_length}")
 
     return fragments
 
@@ -77,161 +62,120 @@ def split_payload(content_b64, path):
 def build_fragment_pachet(code, fragment_payload, msg_id, msg_type=0):
     version = 1
     tkl = 0
-
     first_byte = (version << 6) | (msg_type << 4) | tkl
-    header = struct.pack("!BBH",first_byte,code,msg_id)
-
+    header = struct.pack("!BBH", first_byte, code, msg_id)
     payload = json.dumps(fragment_payload).encode("utf-8")
-    pachet = header + bytes([PAYLOAD_MARKER]) + payload
+    return header + bytes([PAYLOAD_MARKER]) + payload
 
-    return pachet
 
 def is_fragment_upload(payload):
     return isinstance(payload, dict) and "fragment" in payload
 
+
 def get_fragment_info(payload):
     if not is_fragment_upload(payload):
         return None
-
-    fragment_info = payload.get("fragment",{})
-    return (
-        fragment_info.get("index"),
-        fragment_info.get("total"),
-        fragment_info.get("size")
-    )
+    info = payload.get("fragment", {})
+    return (info.get("index"), info.get("total"), info.get("size"))
 
 
 class AsamblareFragment:
     def __init__(self):
         self.fragments = {}
         self.expected_total = {}
+        self.timestamps = {}
+        self.lock = threading.Lock()
 
-    def add_fragment(self,path,index,total,content):
-        if path not in self.fragments:
-            self.fragments[path] = {}
-            self.expected_total[path] = total
+        # Thread cleanup
+        cleanup = threading.Thread(target=self._cleanup_loop, daemon=True)
+        cleanup.start()
 
-        self.fragments[path][index] = content
+    def _cleanup_loop(self):
+        while True:
+            time.sleep(60)
+            self._cleanup_old()
 
-        if len(self.fragments[path]) == total:
-            assembled = []
-            for i in range (total):
-                if i not in self.fragments[path]:
-                    return (False, None)
-                assembled.append(self.fragments[path][i])
+    def _cleanup_old(self):
+        with self.lock:
+            now = time.time()
+            expired = [p for p, t in self.timestamps.items() if now - t > FRAGMENT_TIMEOUT]
+            for path in expired:
+                print(f"[CLEANUP] Șterg fragmente expirate: {path}")
+                self.clear_path(path)
 
-            assembled_content = "".join(assembled)
+    def add_fragment(self, path, index, total, content):
+        with self.lock:
+            if path not in self.fragments:
+                self.fragments[path] = {}
+                self.expected_total[path] = total
+                self.timestamps[path] = time.time()
 
-            del self.fragments[path]
-            del self.expected_total[path]
+            self.timestamps[path] = time.time()
+            self.fragments[path][index] = content
 
-            return (True, assembled_content)
+            if len(self.fragments[path]) == total:
+                assembled = []
+                for i in range(total):
+                    if i not in self.fragments[path]:
+                        return (False, None)
+                    assembled.append(self.fragments[path][i])
 
-        return (False, None)
+                result = "".join(assembled)
 
+                del self.fragments[path]
+                del self.expected_total[path]
+                del self.timestamps[path]
 
-    def assemble_content(self, path, index, total, content):
-        return self.add_fragment(path, index, total, content)
+                return (True, result)
+
+            return (False, None)
 
     def get_progress(self, path):
-        if path not in self.fragments:
-            return None
+        with self.lock:
+            if path not in self.fragments:
+                return None
+            received = len(self.fragments[path])
+            total = self.expected_total.get(path, 0)
+            percentage = (received / total * 100) if total > 0 else 0
+            return {"received": received, "total": total, "percentage": round(percentage, 2)}
 
-        received = len(self.fragments[path])
-        total = self.expected_total.get(path,0)
-        percentage = (received / total * 100) if total>0 else 0
-
-        return {
-            "received": received,
-            "total": total,
-            "percentage": round(percentage,2)
-        }
-
-    def clear_path(self,path):
-        if path in self.fragments:
-            del self.fragments[path]
-        if path in self.expected_total:
-            del self.expected_total[path]
+    def clear_path(self, path):
+        with self.lock:
+            if path in self.fragments:
+                del self.fragments[path]
+            if path in self.expected_total:
+                del self.expected_total[path]
+            if path in self.timestamps:
+                del self.timestamps[path]
 
 
 assembler = AsamblareFragment()
 
 
+def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_base):
+    """
+    Trimite fragmente FĂRĂ ACK - simplu și rapid
+    """
+    try:
+        fragments = split_payload(file_content_b64, file_path)
+    except ValueError as e:
+        print(f"[!] Eroare validare: {e}")
+        return False
 
-def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_base, packet_queue):
-    fragments = split_payload(file_content_b64, file_path)
-    total_fragments = len(fragments)
-
-    print(f"[+] Download fragmentat început: {total_fragments} fragmente către {client_addr}")
-
-    original_timeout = sock.gettimeout()
-    sock.settimeout(None)
+    total = len(fragments)
+    print(f"[+] Download fragmentat: {total} fragmente → {client_addr}")
 
     try:
-        for i in range(total_fragments):
-            fragment_payload = fragments[i]
-            msg_id = msg_id_base + i
-            attempts = 0
-            max_attempts = 5
+        for i in range(total):
+            msg_id = msg_id_base + i + 1
+            packet = build_fragment_pachet(69, fragments[i], msg_id)
+            sock.sendto(packet, client_addr)
 
-            while attempts < max_attempts:
-                packet = build_fragment_pachet(69, fragment_payload, msg_id)
-                sock.sendto(packet, client_addr)
-                print(f"    → Trimis fragment {i + 1}/{total_fragments} (msg_id={msg_id}, încercare {attempts + 1})")
+            if i < total - 1:
+                time.sleep(0.001)  # Mic delay pentru UDP
 
-                # Așteptăm ACK-ul din coada globală
-                ack_received = False
-                start_time = time.time()
-
-                while time.time() - start_time < 3.0:
-                    try:
-                        data, addr = packet_queue.get(timeout=0.3)
-                        if addr != client_addr:
-                            packet_queue.put((data, addr))
-                            continue
-
-                        if len(data) < 4:
-                            continue
-
-                        recv_type = (data[0] >> 4) & 0x03
-                        recv_msg_id = (data[2] << 8) | data[3]
-
-                        if recv_type == 2 and recv_msg_id == msg_id:
-                            print(f"    ← ACK primit pentru fragment {i + 1}/{total_fragments}")
-                            ack_received = True
-                            break
-
-                    except queue.Empty:
-                        continue
-
-                ack_received = True
-                if ack_received:
-                    break
-                else:
-                    attempts += 1
-                    print(f"    Timeout – retransmit fragment {i + 1}/{total_fragments} ({attempts}/{max_attempts})")
-
-            else:
-                print(f"[!] EȘEC definitiv la livrare fragment {i + 1}")
-                return False
-
-        print(f"[+] Download fragmentat COMPLET ({total_fragments} fragmente livrate)")
+        print(f"[+] {total} fragmente trimise")
         return True
-
     except Exception as e:
-        print(f"[!] Eroare în download fragmentat: {e}")
+        print(f"[!] Eroare download fragmentat: {e}")
         return False
-    finally:
-        try:
-            sock.settimeout(original_timeout)
-        except:
-            pass
-
-def get_fragment_statistics():
-    return {
-        "active_files": len(assembler.fragments),
-        "files": {
-            path: assembler.get_progress(path)
-            for path in assembler.fragments.keys()
-        }
-    }

@@ -5,116 +5,87 @@ from functii import (
     delete_request,
     move_request,
 )
-import threading_manager as tm
+from threading_manager import handle_request_in_thread
 import json
 import struct
 
-
-
-PAYLOAD_MARKER = 0xFF  # Arată începutul payload-ului
+PAYLOAD_MARKER = 0xFF
 
 
 def parse_coap_header(data):
-    """Parsează primii 4 bytes ai headerului CoAP"""
+    """Parsează header CoAP (4 bytes)"""
     if len(data) < 4:
-        raise ValueError("Pachet prea scurt pentru header CoAP")
+        raise ValueError("Pachet prea scurt")
 
-    # Despachetăm primii 4 bytes: (Version/Type/TKL, Code, Message ID)
     first_byte, code, msg_id = struct.unpack("!BBH", data[:4])
 
-    version = (first_byte >> 6) & 0x03
-    msg_type = (first_byte >> 4) & 0x03
-    tkl = first_byte & 0x0F
-
-    header = {
-        "version": version,
-        "type": msg_type,
-        "tkl": tkl,
+    return {
+        "version": (first_byte >> 6) & 0x03,
+        "type": (first_byte >> 4) & 0x03,
+        "tkl": first_byte & 0x0F,
         "code": code,
         "message_id": msg_id
     }
 
-    return header
-
 
 def parse_packet(data):
-    """Parsează un pachet CoAP complet"""
+    """Parsează pachet CoAP complet"""
     if PAYLOAD_MARKER in data:
         header_part, payload_part = data.split(bytes([PAYLOAD_MARKER]), 1)
     else:
-        header_part, payload_part = data, b""  # Nu există payload
+        header_part, payload_part = data, b""
 
     header = parse_coap_header(header_part)
     payload = {}
 
     if payload_part:
         try:
-            payload = json.loads(payload_part.decode('utf-8'))  # Decodificăm payload-ul JSON
+            payload = json.loads(payload_part.decode('utf-8'))
         except json.JSONDecodeError:
-            print("[!] Eroare parsare JSON payload")
+            print("[!] Eroare parsare JSON")
 
     return header, payload
 
 
-def is_ack_packet(header):
-    """
-    Verifică dacă pachetul este un ACK
-    """
-    return header.get("type") == 2  # Type = 2 pentru ACK
-
-
-def handle_request(header, payload, client_addr, sock, packet_queue=None):
+def handle_request(header, payload, client_addr, sock):
+    """Procesează cerere în thread separat"""
     code = header.get("code")
     msg_type = header.get("type")
     msg_id = header.get("message_id")
 
-    print(f"\n[>] Cerere primită de la {client_addr}")
-    print(f"    Code: {code}, Type: {msg_type}, Message ID: {msg_id}")
+    print(f"\n[→] Cerere de la {client_addr}: Code={code}, Type={msg_type}, MsgID={msg_id}")
 
-    manager = tm.get_manager()
-
-    # Transmitem packet_queue mai departe
-    manager.submit_request(
-        header, payload, client_addr, sock,
-        process_request_threaded,
-        extra_args=(packet_queue,)  # doar coada
-    )
+    # Thread nou pentru procesare
+    handle_request_in_thread(process_request, header, payload, client_addr, sock)
 
 
-
-def process_request_threaded(header, payload, client_addr, sock, io_queue, response_queue, packet_queue=None):
-    """
-    handler_func primește:
-    - header, payload, client_addr, sock, io_queue, response_queue
-    - și packet_queue ca argument extra (transmis din main.py prin extra_args)
-    """
+def process_request(header, payload, client_addr, sock):
+    """Procesează cererea efectivă"""
     code = header.get("code")
     msg_type = header.get("type")
     msg_id = header.get("message_id")
 
-    print(f"[*] Thread Procesare: identificat cod={code}")
+    try:
+        if code == 1:  # GET
+            path = payload.get("path", "")
+            if path.endswith("/"):
+                listare_director(payload, msg_type, msg_id, client_addr, sock)
+            else:
+                download_request(payload, msg_type, msg_id, client_addr, sock)
 
-    if code == 1:  # GET
-        path = payload.get("path", "")
-        if path.endswith("/"):
-            print("[*] → Listare director")
-            listare_director(payload, msg_type, msg_id, client_addr, sock)
+        elif code == 2:  # POST
+            upload_request(payload, msg_type, msg_id, client_addr, sock)
+
+        elif code == 4:  # DELETE
+            delete_request(payload, msg_type, msg_id, client_addr, sock)
+
+        elif code == 5:  # MOVE (custom)
+            move_request(payload, msg_type, msg_id, client_addr, sock)
+
         else:
-            print("[*] → Download fișier")
-            # !!Aici transmit packet_queue mai departe
-            download_request(payload, msg_type, msg_id, client_addr, sock, packet_queue=packet_queue)
+            print(f"[!] Cod necunoscut: {code}")
 
-    elif code == 2:  # POST
-        print("[*] → Upload fișier")
-        upload_request(payload, msg_type, msg_id, client_addr, sock)
-
-    elif code == 4:  # DELETE
-        print("[*] → Ștergere")
-        delete_request(payload, msg_type, msg_id, client_addr, sock)
-
-    elif code == 5:  # MOVE
-        print("[*] → Mutare fișier")
-        move_request(payload, msg_type, msg_id, client_addr, sock)
-
-    else:
-        print(f"[!] Cod necunoscut: {code}")
+    except Exception as e:
+        print(f"[!] Eroare procesare: {e}")
+        import traceback
+        traceback.print_exc()
