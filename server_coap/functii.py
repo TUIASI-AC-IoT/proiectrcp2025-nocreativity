@@ -529,11 +529,6 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
 
         print(f"Fisier mutat: {source} -> {destination}")
     except Exception as e:
-        import traceback
-        print(f"Error move: {e}")
-        traceback.print_exc()
-'''
-    except Exception as e:
         print(f"Error move: {e}")
         if msg_type == 0:
             ack_payload = json.dumps({
@@ -541,5 +536,3 @@ def move_request(payload,msg_type,msg_id,client_addr,sock):
                 "message": str(e)
             }).encode("utf-8")
             build_and_submit_response(sock,client_addr,msg_id,ack_payload,COAP["SERVER_ERROR"])
-'''
-  

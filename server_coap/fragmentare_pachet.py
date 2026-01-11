@@ -143,12 +143,12 @@ def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, m
     sock.settimeout(5.0)
 
     try:
+      
         for i in range(total_fragments):
             fragment_payload = fragments[i]
             msg_id = msg_id_base + i
             attempts = 0
             max_attempts = 10
-
             while attempts < max_attempts:
                 packet = build_fragment_pachet(69, fragment_payload, msg_id)
                 sock.sendto(packet, client_addr)
@@ -182,6 +182,7 @@ def handle_fragmented_download(file_path, file_content_b64, sock, client_addr, m
     except Exception as e:
         print(f"[!] Eroare în download fragmentat: {e}")
         return False
+  
     finally:
         # SIGUR: restaurăm timeout-ul doar dacă socket-ul e valid
         try:

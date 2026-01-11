@@ -74,10 +74,12 @@ threading.Thread(target=test_client, daemon=True).start()
 # Bucla principală server
 try:
     while True:
-        data, client_addr = server_sock.recvfrom(65535)
-        header, payload = parse_packet(data)
-        handle_request(header, payload, client_addr, server_sock)
-
+        try:
+            data, client_addr = server_sock.recvfrom(65535)
+            header, payload = parse_packet(data)
+            handle_request(header, payload, client_addr, server_sock)
+        except socket.timeout:
+            continue
 except KeyboardInterrupt:
     print("\n[*] Oprire server...")
 finally:
