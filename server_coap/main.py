@@ -1,8 +1,4 @@
 import socket
-import json
-import base64
-import threading
-import time
 
 from Pachet import handle_request, parse_packet
 from threading_manager import start_workers, stop_workers
@@ -18,49 +14,48 @@ print(f"[*] Server CoAP pornit pe port {SERVER_PORT}")
 # Pornește worker
 start_workers()
 
-
-def test_client():
-    """Test automat la pornire"""
-    time.sleep(1)
-
-    client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    client_sock.settimeout(5.0)
-
-    test_content = "Test automat la pornire server".encode("utf-8")
-    content_b64 = base64.b64encode(test_content).decode("utf-8")
-
-    payload_json = json.dumps({
-        "path": "storage/test_automat.txt",
-        "content": content_b64
-    }).encode("utf-8")
-
-    # Header CoAP: Ver=1, Type=0 (CON), Code=0.02 (POST), MsgID=12345
-    header = bytes([0x40, 0x02, 0x30, 0x39])
-    packet = header + bytes([0xFF]) + payload_json
-
-    print("[TEST] Trimit pachet upload...\n")
-
-    try:
-        client_sock.sendto(packet, ("127.0.0.1", SERVER_PORT))
-
-        data, addr = client_sock.recvfrom(65535)
-        header_resp, resp_payload = parse_packet(data)
-
-        if resp_payload.get("status") == "created":
-            print(f"[TEST] ✓ Fișier creat: {resp_payload.get('path')}")
-        else:
-            print(f"[TEST] Eroare: {resp_payload}")
-
-    except socket.timeout:
-        print("[TEST] Timeout")
-    except Exception as e:
-        print(f"[TEST] Eroare: {e}")
-    finally:
-        client_sock.close()
+#test automat la pornire
+# def test_client():
+#     time.sleep(1)
+#
+#     client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     client_sock.settimeout(5.0)
+#
+#     test_content = "Test automat la pornire server".encode("utf-8")
+#     content_b64 = base64.b64encode(test_content).decode("utf-8")
+#
+#     payload_json = json.dumps({
+#         "path": "storage/test_automat.txt",
+#         "content": content_b64
+#     }).encode("utf-8")
+#
+#     # Header CoAP: Ver=1, Type=0 (CON), Code=0.02 (POST), MsgID=12345
+#     header = bytes([0x40, 0x02, 0x30, 0x39])
+#     packet = header + bytes([0xFF]) + payload_json
+#
+#     print("[TEST] Trimit pachet upload...\n")
+#
+#     try:
+#         client_sock.sendto(packet, ("127.0.0.1", SERVER_PORT))
+#
+#         data, addr = client_sock.recvfrom(65535)
+#         header_resp, resp_payload = parse_packet(data)
+#
+#         if resp_payload.get("status") == "created":
+#             print(f"[TEST] Fișier creat: {resp_payload.get('path')}")
+#         else:
+#             print(f"[TEST] Eroare: {resp_payload}")
+#
+#     except socket.timeout:
+#         print("[TEST] Timeout")
+#     except Exception as e:
+#         print(f"[TEST] Eroare: {e}")
+#     finally:
+#         client_sock.close()
 
 
 # Test în thread separat
-threading.Thread(target=test_client, daemon=True).start()
+#threading.Thread(target=test_client, daemon=True).start()
 
 # Loop principal
 try:
@@ -83,8 +78,8 @@ try:
             continue
 
 except KeyboardInterrupt:
-    print("\n[*] Oprire server...")
+    print("\nOprire server...")
 finally:
     stop_workers()
     server_sock.close()
-    print("[*] Server oprit")
+    print("Server oprit")

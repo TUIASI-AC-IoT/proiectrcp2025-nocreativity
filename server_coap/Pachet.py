@@ -13,7 +13,7 @@ PAYLOAD_MARKER = 0xFF
 
 
 def parse_coap_header(data):
-    """Parsează header CoAP (4 bytes)"""
+    #Parsează header CoAP (4 bytes)
     if len(data) < 4:
         raise ValueError("Pachet prea scurt")
 
@@ -29,7 +29,7 @@ def parse_coap_header(data):
 
 
 def parse_packet(data):
-    """Parsează pachet CoAP complet"""
+    #Parsează pachet CoAP complet
     if PAYLOAD_MARKER in data:
         header_part, payload_part = data.split(bytes([PAYLOAD_MARKER]), 1)
     else:
@@ -42,25 +42,25 @@ def parse_packet(data):
         try:
             payload = json.loads(payload_part.decode('utf-8'))
         except json.JSONDecodeError:
-            print("[!] Eroare parsare JSON")
+            print("Eroare parsare JSON")
 
     return header, payload
 
 
 def handle_request(header, payload, client_addr, sock):
-    """Procesează cerere în thread separat"""
+    #Procesează cerere în thread separat
     code = header.get("code")
     msg_type = header.get("type")
     msg_id = header.get("message_id")
 
-    print(f"\n[→] Cerere de la {client_addr}: Code={code}, Type={msg_type}, MsgID={msg_id}")
+    print(f"\nCerere de la {client_addr}: Code={code}, Type={msg_type}, MsgID={msg_id}")
 
     # Thread nou pentru procesare
     handle_request_in_thread(process_request, header, payload, client_addr, sock)
 
 
 def process_request(header, payload, client_addr, sock):
-    """Procesează cererea efectivă"""
+    #Procesează cererea efectivă
     code = header.get("code")
     msg_type = header.get("type")
     msg_id = header.get("message_id")
@@ -79,13 +79,13 @@ def process_request(header, payload, client_addr, sock):
         elif code == 4:  # DELETE
             delete_request(payload, msg_type, msg_id, client_addr, sock)
 
-        elif code == 5:  # MOVE (custom)
+        elif code == 5:  # MOVE
             move_request(payload, msg_type, msg_id, client_addr, sock)
 
         else:
-            print(f"[!] Cod necunoscut: {code}")
+            print(f"Cod necunoscut: {code}")
 
     except Exception as e:
-        print(f"[!] Eroare procesare: {e}")
+        print(f"Eroare procesare: {e}")
         import traceback
         traceback.print_exc()

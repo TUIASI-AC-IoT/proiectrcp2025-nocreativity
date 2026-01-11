@@ -15,7 +15,7 @@ PAYLOAD_MARKER = 0xFF
 
 # Limite protecție
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
-FRAGMENT_TIMEOUT = 300  # 5 minute
+FRAGMENT_TIMEOUT = 300  # in secunde
 
 
 def fragmente_necesare(content_b64):
@@ -27,7 +27,7 @@ def fragmente_necesare(content_b64):
 
 
 def split_payload(content_b64, path):
-    """Împarte base64 pe fragmente"""
+    #Împarte base64 pe fragmente
     if not isinstance(content_b64, str):
         raise ValueError("content_b64 trebuie string")
 
@@ -153,17 +153,15 @@ assembler = AsamblareFragment()
 
 
 def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_base):
-    """
-    Trimite fragmente FĂRĂ ACK - simplu și rapid
-    """
+
     try:
         fragments = split_payload(file_content_b64, file_path)
     except ValueError as e:
-        print(f"[!] Eroare validare: {e}")
+        print(f"Eroare validare: {e}")
         return False
 
     total = len(fragments)
-    print(f"[+] Download fragmentat: {total} fragmente → {client_addr}")
+    print(f"Download fragmentat: {total} fragmente → {client_addr}")
 
     try:
         for i in range(total):
@@ -174,8 +172,8 @@ def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_bas
             if i < total - 1:
                 time.sleep(0.001)  # Mic delay pentru UDP
 
-        print(f"[+] {total} fragmente trimise")
+        print(f"{total} fragmente trimise")
         return True
     except Exception as e:
-        print(f"[!] Eroare download fragmentat: {e}")
+        print(f"Eroare download fragmentat: {e}")
         return False
