@@ -15,6 +15,7 @@ PAYLOAD_MARKER = 0xFF
 
 # Limite protecție
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+#timeout pentru cleanup fragmente incomplete
 FRAGMENT_TIMEOUT = 300  # in secunde
 
 
@@ -28,14 +29,18 @@ def fragmente_necesare(content_b64):
 
 def split_payload(content_b64, path):
     #Împarte base64 pe fragmente
+
+    #tip de date corecte
     if not isinstance(content_b64, str):
         raise ValueError("content_b64 trebuie string")
 
+    #liimite protectie
     if len(content_b64) > MAX_FILE_SIZE * 4 / 3:
         raise ValueError(f"Fișier prea mare: max {MAX_FILE_SIZE} bytes")
 
     chunk_size = MAX_PAYLOAD_SIZE
 
+    #in caz ca incape intr-un pachet
     if len(content_b64) <= chunk_size:
         return [{
             "path": path,
@@ -78,7 +83,7 @@ def get_fragment_info(payload):
     info = payload.get("fragment", {})
     return (info.get("index"), info.get("total"), info.get("size"))
 
-
+#gestioneaza asamblarea fragmentelor primite
 class AsamblareFragment:
     def __init__(self):
         self.fragments = {}
@@ -90,11 +95,13 @@ class AsamblareFragment:
         cleanup = threading.Thread(target=self._cleanup_loop, daemon=True)
         cleanup.start()
 
+    #bucla infinita pentru un cleanup automat
     def _cleanup_loop(self):
         while True:
             time.sleep(60)
             self._cleanup_old()
 
+    #sterge fragmentele incomplete mai vechi
     def _cleanup_old(self):
         with self.lock:
             now = time.time()
@@ -105,14 +112,17 @@ class AsamblareFragment:
 
     def add_fragment(self, path, index, total, content):
         with self.lock:
+            #initializare
             if path not in self.fragments:
                 self.fragments[path] = {}
                 self.expected_total[path] = total
                 self.timestamps[path] = time.time()
 
+            #salvare fragment si update timestamp
             self.timestamps[path] = time.time()
             self.fragments[path][index] = content
 
+            #incercam sa asamblam toate fragmentele
             if len(self.fragments[path]) == total:
                 assembled = []
                 for i in range(total):
@@ -122,6 +132,7 @@ class AsamblareFragment:
 
                 result = "".join(assembled)
 
+                #eliberare memorie
                 del self.fragments[path]
                 del self.expected_total[path]
                 del self.timestamps[path]
@@ -148,12 +159,12 @@ class AsamblareFragment:
             if path in self.timestamps:
                 del self.timestamps[path]
 
-
+#instanta globala , se foloseste in functii.py
 assembler = AsamblareFragment()
 
 
 def handle_fragmented(file_path, file_content_b64, sock, client_addr, msg_id_base):
-
+    #trimite un fisier fragmentat catre client
     try:
         fragments = split_payload(file_content_b64, file_path)
     except ValueError as e:

@@ -55,7 +55,7 @@ def handle_request(header, payload, client_addr, sock):
 
     print(f"\nCerere de la {client_addr}: Code={code}, Type={msg_type}, MsgID={msg_id}")
 
-    # Thread nou pentru procesare
+    # Thread nou pentru procesare, functii in threading_manager.py
     handle_request_in_thread(process_request, header, payload, client_addr, sock)
 
 

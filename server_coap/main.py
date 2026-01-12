@@ -74,11 +74,11 @@ try:
             handle_request(header, payload, client_addr, server_sock)
 
         except Exception as e:
-            print(f"[!] Eroare recvfrom: {e}")
+            print(f"Eroare recvfrom: {e}")
             continue
 
 except KeyboardInterrupt:
-    print("\nOprire server...")
+    print("\nOprire server.....................")
 finally:
     stop_workers()
     server_sock.close()
