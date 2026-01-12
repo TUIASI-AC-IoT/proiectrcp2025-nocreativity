@@ -253,13 +253,15 @@ def download_request(payload, msg_type, msg_id, client_addr, sock):
 
 
 def handle_normal_download(file_path, file_size, content_b64, sock, client_addr, msg_id, msg_type):
+    resp = json.dumps({
+        "name": os.path.basename(file_path),
+        "size": file_size,
+        "content": content_b64
+    }).encode("utf-8")
     if msg_type == 0:
-        resp = json.dumps({
-            "name": os.path.basename(file_path),
-            "size": file_size,
-            "content": content_b64
-        }).encode("utf-8")
         build_response(sock, client_addr, msg_id, resp, COAP["CONTENT"])
+    elif msg_type == 1:
+        build_response(sock, client_addr, msg_id, resp, COAP["CONTENT"],1)
 
     print(f"Download: {file_path} ({file_size} bytes)")
 
@@ -356,7 +358,7 @@ def listare_director(payload, msg_type, msg_id, client_addr, sock):
         if msg_type == 0:
             build_response(sock, client_addr, msg_id, resp, COAP["CONTENT"])
         elif msg_type == 1:
-            build_response(sock, client_addr, msg_id, resp, COAP["CONTENT"], 0)
+            build_response(sock, client_addr, msg_id, resp, COAP["CONTENT"], 1)
 
         print(f"Listare: {dir_path}")
 
