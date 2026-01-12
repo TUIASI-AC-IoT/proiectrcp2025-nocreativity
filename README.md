@@ -441,9 +441,8 @@ __4. Threading și paralelizare__
 | Fir | Responsabilitate | Detalii|
 | :--- | :----: | :----: |
 | Thread Main |Ascultă pachete UDP | Socket.recvfrom()  într-un loop infinit|
-|Thread de procesare cereri | Decodifică pachetul și identifică metoda | Creează un task pentru fiecare cerere nouă |
-|Thread pentru fișiere | Operații I/O (citire/scriere/mutare) | Evită blocarea firului principal |
-|Thread de răspuns | Trimite pachetele ACK/Response | Confirmă cererea, trimite payload-ul |
+|Threaduri de procesare cereri | Procesează cereri (inclusiv I/O) | Se creează unul pentru fiecare cerere nouă |
+|Worker de răspuns | Trimite pachetele ACK/Response | Extrage din coadă un răspuns și îl trimite |
 
 <br><br>
 
@@ -462,13 +461,13 @@ Main Thread
 |                              —> Decodifică pachetul
 |                              —> Identifică metoda 
 |                              —> Dacă e nevoie crează:
-|                               |        |
-|                               |        —> Thread pentru fișiere (doar dacă e necesar)
-|                               |	        	   |
-|                               |                  —> Execută operații pe fișiere sau directoare
-|	                    |	               |
-|                               |                 ∨
-|                               ——> Thread de răspuns
+|                              —> Execută operații pe fișiere sau directoare       
+|                               |       
+|                               |	        	   
+|                               | 
+|	                            |	               
+|                               |                 
+|                               ——> Worker de răspuns
 |                                                  |
 |                                                  —> Formează mesajul de răspuns și îl trimite
 |
